@@ -288,6 +288,33 @@ class _LoginViewState extends State<LoginView> {
                             ],
                           ),
                         ),
+
+                        const SizedBox(height: 14),
+
+                        // Developer Credit
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: colors.cardSurface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: colors.border.withValues(alpha: 0.7)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.engineering_rounded, size: 14, color: colors.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'تطوير: م / مؤمن أحمد محمد | 📱 01003779702',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),

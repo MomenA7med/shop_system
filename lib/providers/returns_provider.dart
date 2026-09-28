@@ -66,8 +66,11 @@ class ReturnsProvider with ChangeNotifier {
     required int returnQty,
     required String reason,
     required int? shiftId,
+    int? orderId,
+    String? invoiceNumber,
   }) async {
-    if (_searchedOrder == null || _searchedOrder!.id == null || item.id == null) {
+    final effectiveOrderId = orderId ?? item.orderId ?? _searchedOrder?.id;
+    if (effectiveOrderId == null || item.id == null) {
       _errorMessage = 'بيانات الفاتورة غير مكتملة';
       notifyListeners();
       return false;
@@ -87,7 +90,7 @@ class ReturnsProvider with ChangeNotifier {
     try {
       final refundAmount = returnQty * item.unitPrice;
       await DatabaseHelper.instance.processReturn(
-        orderId: _searchedOrder!.id!,
+        orderId: effectiveOrderId,
         orderItemId: item.id!,
         variantId: item.variantId,
         shiftId: shiftId,
@@ -101,8 +104,11 @@ class ReturnsProvider with ChangeNotifier {
       );
 
       _successMessage = 'تمت عملية الإرجاع بنجاح وتحديث المخزون والدرج النقدي';
-      // Refresh searched order
-      await searchOrder(_searchedOrder!.invoiceNumber);
+      // Refresh searched order if active
+      final effectiveInvoiceNumber = invoiceNumber ?? _searchedOrder?.invoiceNumber;
+      if (effectiveInvoiceNumber != null && _searchedOrder != null) {
+        await searchOrder(effectiveInvoiceNumber);
+      }
       await loadReturnsHistory();
       return true;
     } catch (e) {

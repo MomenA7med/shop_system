@@ -8,6 +8,7 @@ class StoreSettingsModel {
   final String receiptFooter;
   final double taxRatePercent;
   final String themeMode; // 'dark', 'light', 'system'
+  final String? logoPath;
 
   StoreSettingsModel({
     this.id = 1,
@@ -19,6 +20,7 @@ class StoreSettingsModel {
     this.receiptFooter = 'شكراً لزيارتكم! البضاعة المباعة ترد وتستبدل خلال 14 يوماً مع أصل الفاتورة',
     this.taxRatePercent = 0.0,
     this.themeMode = 'dark',
+    this.logoPath,
   });
 
   Map<String, dynamic> toMap() {
@@ -32,6 +34,7 @@ class StoreSettingsModel {
       'receipt_footer': receiptFooter,
       'tax_rate_percent': taxRatePercent,
       'theme_mode': themeMode,
+      'logo_path': logoPath,
     };
   }
 
@@ -46,6 +49,7 @@ class StoreSettingsModel {
       receiptFooter: map['receipt_footer'] as String? ?? 'شكراً لزيارتكم! البضاعة المباعة ترد وتستبدل خلال 14 يوماً مع الفاتورة',
       taxRatePercent: (map['tax_rate_percent'] as num?)?.toDouble() ?? 0.0,
       themeMode: map['theme_mode'] as String? ?? 'dark',
+      logoPath: map['logo_path'] as String?,
     );
   }
 
@@ -58,6 +62,8 @@ class StoreSettingsModel {
     String? receiptFooter,
     double? taxRatePercent,
     String? themeMode,
+    String? logoPath,
+    bool clearLogo = false,
   }) {
     return StoreSettingsModel(
       id: id,
@@ -69,6 +75,37 @@ class StoreSettingsModel {
       receiptFooter: receiptFooter ?? this.receiptFooter,
       taxRatePercent: taxRatePercent ?? this.taxRatePercent,
       themeMode: themeMode ?? this.themeMode,
+      logoPath: clearLogo ? null : (logoPath ?? this.logoPath),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is StoreSettingsModel &&
+        other.id == id &&
+        other.storeName == storeName &&
+        other.slogan == slogan &&
+        other.phone == phone &&
+        other.address == address &&
+        other.currencySymbol == currencySymbol &&
+        other.receiptFooter == receiptFooter &&
+        other.taxRatePercent == taxRatePercent &&
+        other.themeMode == themeMode &&
+        other.logoPath == logoPath;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        storeName,
+        slogan,
+        phone,
+        address,
+        currencySymbol,
+        receiptFooter,
+        taxRatePercent,
+        themeMode,
+        logoPath,
+      );
 }

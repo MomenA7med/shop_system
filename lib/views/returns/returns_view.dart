@@ -5,6 +5,10 @@ import '../../core/constants/app_strings.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/order_item_model.dart';
+import '../../providers/inventory_provider.dart';
+import '../../providers/invoices_provider.dart';
+import '../../providers/pos_provider.dart';
+import '../../providers/reports_provider.dart';
 import '../../providers/returns_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/shift_provider.dart';
@@ -579,19 +583,32 @@ class _ReturnsViewState extends State<ReturnsView> {
                             ),
                             onPressed: () async {
                               final shiftId = shift.activeShift?.id;
-                              await returns.returnItem(
+                              final invoicesProv = context.read<InvoicesProvider>();
+                              final reportsProv = context.read<ReportsProvider>();
+                              final inventoryProv = context.read<InventoryProvider>();
+                              final posProv = context.read<POSProvider>();
+
+                              final ok = await returns.returnItem(
                                 item: item,
                                 returnQty: selectedQty,
                                 reason:
                                     _returnReasons[item.id!] ?? 'طلب العميل',
                                 shiftId: shiftId,
+                                orderId: order.id,
+                                invoiceNumber: order.invoiceNumber,
                               );
 
-                              if (shiftId != null &&
-                                  shift.activeShift != null) {
-                                await shift.checkActiveShift(
-                                  shift.activeShift!.cashierId,
-                                );
+                              if (ok) {
+                                if (shiftId != null &&
+                                    shift.activeShift != null) {
+                                  await shift.checkActiveShift(
+                                    shift.activeShift!.cashierId,
+                                  );
+                                }
+                                invoicesProv.loadInvoices();
+                                reportsProv.loadReports();
+                                inventoryProv.loadInventory();
+                                posProv.loadPOSData();
                               }
                             },
                           ),

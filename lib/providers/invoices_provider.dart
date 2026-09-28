@@ -38,9 +38,13 @@ class InvoicesProvider with ChangeNotifier {
 
   // Computed Summary Metrics for active filter
   double get totalSalesAmount => _invoices.fold(0.0, (sum, order) => sum + order.totalAmount);
+  double get netSalesAmount => _invoices.fold(0.0, (sum, order) => sum + order.netTotalAmount);
+  double get totalRefundedAmount => _invoices.fold(0.0, (sum, order) => sum + order.refundedAmount);
   int get totalInvoicesCount => _invoices.length;
   int get totalItemsCount => _invoices.fold(0, (sum, order) => sum + order.totalItemCount);
-  double get averageInvoiceValue => _invoices.isEmpty ? 0.0 : totalSalesAmount / _invoices.length;
+  int get remainingItemsCount => _invoices.fold(0, (sum, order) => sum + order.remainingPieces);
+  int get totalReturnedItemsCount => _invoices.fold(0, (sum, order) => sum + order.totalReturnedPieces);
+  double get averageInvoiceValue => _invoices.isEmpty ? 0.0 : netSalesAmount / _invoices.length;
 
   Future<void> loadInvoices() async {
     _isLoading = true;

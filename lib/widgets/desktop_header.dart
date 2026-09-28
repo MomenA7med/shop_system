@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants/app_colors.dart';
@@ -49,6 +50,7 @@ class _DesktopHeaderState extends State<DesktopHeader> {
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 950;
         final isVeryCompact = constraints.maxWidth < 750;
+        final hasLogo = settings.logoPath != null && File(settings.logoPath!).existsSync();
 
         return Container(
           height: 58,
@@ -59,7 +61,7 @@ class _DesktopHeaderState extends State<DesktopHeader> {
           ),
           child: Row(
             children: [
-              // Store Branding & Logo Placeholder Tag
+              // Store Branding & Logo Tag
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
@@ -70,7 +72,18 @@ class _DesktopHeaderState extends State<DesktopHeader> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 18),
+                    if (hasLogo)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: Image.file(
+                          File(settings.logoPath!),
+                          width: 22,
+                          height: 22,
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    else
+                      const Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 18),
                     if (!isVeryCompact) ...[
                       const SizedBox(width: 8),
                       Text(
@@ -201,49 +214,49 @@ class _DesktopHeaderState extends State<DesktopHeader> {
 
               const SizedBox(width: 10),
 
-              // User Profile & Role
+              // User Profile & Role Card
               if (auth.currentUser != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: auth.isAdmin ? AppColors.secondary : AppColors.primary,
-                      child: Text(
-                        auth.currentUser!.name.substring(0, 1),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: colors.cardSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: colors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 13,
+                        backgroundColor: auth.isAdmin ? AppColors.secondary : AppColors.primary,
+                        child: Text(
+                          auth.currentUser!.name.isNotEmpty ? auth.currentUser!.name.substring(0, 1) : 'U',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
                       ),
-                    ),
-                    if (!isCompact) ...[
-                      const SizedBox(width: 8),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            auth.currentUser!.name,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: colors.textPrimary),
-                          ),
-                          Text(
-                            auth.isAdmin ? 'مدير' : 'كاشير',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: auth.isAdmin ? AppColors.secondary : colors.primaryLight,
+                      if (!isCompact) ...[
+                        const SizedBox(width: 8),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              auth.currentUser!.name,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: colors.textPrimary),
                             ),
-                          ),
-                        ],
-                      ),
+                            Text(
+                              auth.isAdmin ? 'مدير' : 'كاشير',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: auth.isAdmin ? AppColors.secondary : colors.primaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                    IconButton(
-                      tooltip: 'تسجيل الخروج',
-                      icon: Icon(Icons.logout, size: 17, color: colors.textMuted),
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        auth.logout();
-                      },
-                    ),
-                  ],
+                  ),
                 ),
             ],
           ),

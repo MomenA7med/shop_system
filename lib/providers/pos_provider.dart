@@ -30,7 +30,7 @@ class POSProvider with ChangeNotifier {
 
   double get subtotal => _cartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
   double get grandTotal => (subtotal - _discount) > 0 ? (subtotal - _discount) : 0.0;
-  double get changeDue => _amountPaid > grandTotal ? _amountPaid - grandTotal : 0.0;
+  double get changeDue => (_cartItems.isNotEmpty && _amountPaid > grandTotal) ? _amountPaid - grandTotal : 0.0;
   bool get canCheckout => _cartItems.isNotEmpty && _amountPaid >= grandTotal && grandTotal > 0;
 
   Future<void> loadPOSData() async {
@@ -38,6 +38,7 @@ class POSProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      await DatabaseHelper.instance.cleanupOrphanedProducts();
       _categories = await DatabaseHelper.instance.getAllCategories();
       _products = await DatabaseHelper.instance.getProducts(
         categoryId: _selectedCategoryId,
@@ -145,7 +146,10 @@ class POSProvider with ChangeNotifier {
       } else {
         _cartItems.removeAt(index);
       }
-      if (_amountPaid < grandTotal) {
+      if (_cartItems.isEmpty) {
+        _amountPaid = 0.0;
+        _discount = 0.0;
+      } else if (_amountPaid < grandTotal || _amountPaid > grandTotal) {
         _amountPaid = grandTotal;
       }
       notifyListeners();
@@ -155,7 +159,10 @@ class POSProvider with ChangeNotifier {
   void removeItem(int index) {
     if (index >= 0 && index < _cartItems.length) {
       _cartItems.removeAt(index);
-      if (_amountPaid < grandTotal) {
+      if (_cartItems.isEmpty) {
+        _amountPaid = 0.0;
+        _discount = 0.0;
+      } else if (_amountPaid < grandTotal || _amountPaid > grandTotal) {
         _amountPaid = grandTotal;
       }
       notifyListeners();
@@ -171,15 +178,24 @@ class POSProvider with ChangeNotifier {
   }
 
   void setDiscount(double discountAmount) {
-    _discount = discountAmount < 0 ? 0.0 : discountAmount;
-    if (_amountPaid < grandTotal) {
-      _amountPaid = grandTotal;
+    if (_cartItems.isEmpty) {
+      _discount = 0.0;
+      _amountPaid = 0.0;
+    } else {
+      _discount = discountAmount < 0 ? 0.0 : discountAmount;
+      if (_amountPaid < grandTotal) {
+        _amountPaid = grandTotal;
+      }
     }
     notifyListeners();
   }
 
   void setAmountPaid(double amount) {
-    _amountPaid = amount;
+    if (_cartItems.isEmpty) {
+      _amountPaid = 0.0;
+    } else {
+      _amountPaid = amount < 0 ? 0.0 : amount;
+    }
     notifyListeners();
   }
 

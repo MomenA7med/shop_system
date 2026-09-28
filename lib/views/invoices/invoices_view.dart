@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../models/order_model.dart';
 import '../../providers/invoices_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../pos/widgets/receipt_preview_modal.dart';
@@ -61,27 +62,23 @@ class _InvoicesViewState extends State<InvoicesView> {
     }
   }
 
-  Color _getStatusColor(String status, AppColorsExtension colors) {
-    switch (status) {
-      case 'refunded':
-        return colors.error;
-      case 'partially_refunded':
-        return colors.warning;
-      case 'completed':
-      default:
-        return colors.success;
+  Color _getStatusColor(OrderModel order, AppColorsExtension colors) {
+    if (order.isFullyRefunded) {
+      return colors.error;
+    } else if (order.isPartiallyRefunded) {
+      return colors.warning;
+    } else {
+      return colors.success;
     }
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'refunded':
-        return 'مسترجعة';
-      case 'partially_refunded':
-        return 'مرتجع جزئي';
-      case 'completed':
-      default:
-        return 'مكتملة';
+  String _getStatusLabel(OrderModel order) {
+    if (order.isFullyRefunded) {
+      return 'مسترجعة بالكامل';
+    } else if (order.isPartiallyRefunded) {
+      return 'مرتجع جزئي';
+    } else {
+      return 'مكتملة';
     }
   }
 
@@ -155,8 +152,11 @@ class _InvoicesViewState extends State<InvoicesView> {
               children: [
                 Expanded(
                   child: _buildMetricCard(
-                    title: 'إجمالي المبيعات للفترة',
-                    value: CurrencyFormatter.format(invoicesProv.totalSalesAmount, symbol: settings.currencySymbol),
+                    title: 'صافي المبيعات للفترة',
+                    value: CurrencyFormatter.format(invoicesProv.netSalesAmount, symbol: settings.currencySymbol),
+                    subtitle: invoicesProv.totalRefundedAmount > 0
+                        ? 'إجمالي المرتجع: ${CurrencyFormatter.formatSimple(invoicesProv.totalRefundedAmount)}'
+                        : null,
                     icon: Icons.payments_outlined,
                     iconColor: colors.primary,
                     colors: colors,
@@ -176,7 +176,10 @@ class _InvoicesViewState extends State<InvoicesView> {
                 Expanded(
                   child: _buildMetricCard(
                     title: 'إجمالي القطع المباعة',
-                    value: '${invoicesProv.totalItemsCount} قطعة',
+                    value: '${invoicesProv.remainingItemsCount} قطعة',
+                    subtitle: invoicesProv.totalReturnedItemsCount > 0
+                        ? 'مسترجع: ${invoicesProv.totalReturnedItemsCount} قطعة'
+                        : null,
                     icon: Icons.checkroom_outlined,
                     iconColor: colors.success,
                     colors: colors,
@@ -405,7 +408,7 @@ class _InvoicesViewState extends State<InvoicesView> {
                               separatorBuilder: (_, _) => Divider(height: 1, color: colors.border),
                               itemBuilder: (context, index) {
                                 final order = invoices[index];
-                                final statusColor = _getStatusColor(order.status, colors);
+                                final statusColor = _getStatusColor(order, colors);
 
                                 return InkWell(
                                   onTap: () {
@@ -458,37 +461,75 @@ class _InvoicesViewState extends State<InvoicesView> {
                                         // Items & Qty count
                                         Expanded(
                                           flex: 2,
-                                          child: Text(
-                                            '${order.items.length} أصناف (${order.totalItemCount} قطع)',
-                                            style: TextStyle(fontSize: 11, color: colors.textSecondary),
-                                          ),
+                                          child: order.hasReturns
+                                              ? Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      '${order.items.length} أصناف (${order.remainingPieces} متبقي)',
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                                                    ),
+                                                    Text(
+                                                      'تم إرجاع ${order.totalReturnedPieces} قطع',
+                                                      style: TextStyle(fontSize: 10, color: colors.warning, fontWeight: FontWeight.w600),
+                                                    ),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  '${order.items.length} أصناف (${order.totalPieces} قطع)',
+                                                  style: TextStyle(fontSize: 11, color: colors.textSecondary),
+                                                ),
                                         ),
 
                                         // Grand Total
                                         Expanded(
                                           flex: 2,
-                                          child: Text(
-                                            CurrencyFormatter.format(order.totalAmount, symbol: settings.currencySymbol),
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: colors.isDark ? colors.primaryLight : colors.primaryDark,
-                                            ),
-                                          ),
+                                          child: order.hasReturns
+                                              ? Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      CurrencyFormatter.format(order.netTotalAmount, symbol: settings.currencySymbol),
+                                                      style: TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 13,
+                                                        color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      'مسترجع: ${CurrencyFormatter.formatSimple(order.refundedAmount)}',
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: colors.error,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  CurrencyFormatter.format(order.totalAmount, symbol: settings.currencySymbol),
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                    color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                                  ),
+                                                ),
                                         ),
 
                                         // Status
                                         Expanded(
                                           flex: 2,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                                             decoration: BoxDecoration(
                                               color: statusColor.withValues(alpha: 0.12),
                                               borderRadius: BorderRadius.circular(4),
                                               border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                                             ),
                                             child: Text(
-                                              _getStatusLabel(order.status),
+                                              _getStatusLabel(order),
                                               textAlign: TextAlign.center,
                                               style: TextStyle(
                                                 fontSize: 10,
@@ -610,6 +651,7 @@ class _InvoicesViewState extends State<InvoicesView> {
   Widget _buildMetricCard({
     required String title,
     required String value,
+    String? subtitle,
     required IconData icon,
     required Color iconColor,
     required AppColorsExtension colors,
@@ -635,6 +677,7 @@ class _InvoicesViewState extends State<InvoicesView> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
@@ -649,6 +692,15 @@ class _InvoicesViewState extends State<InvoicesView> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 10, color: colors.warning, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),

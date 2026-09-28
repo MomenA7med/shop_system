@@ -30,7 +30,12 @@ class OrderItemModel {
   double get totalPrice => quantity * unitPrice;
   double get totalCost => quantity * costPrice;
   double get profit => totalPrice - totalCost;
-  int get remainingQuantity => quantity - returnedQuantity;
+  int get remainingQuantity => (quantity - returnedQuantity).clamp(0, quantity);
+  double get netTotalPrice => remainingQuantity * unitPrice;
+  double get netCost => remainingQuantity * costPrice;
+  double get netProfit => netTotalPrice - netCost;
+  double get refundedAmount => returnedQuantity * unitPrice;
+  bool get isFullyReturned => remainingQuantity <= 0 && quantity > 0;
 
   Map<String, dynamic> toMap() {
     return {

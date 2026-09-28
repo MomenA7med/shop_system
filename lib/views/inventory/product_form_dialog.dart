@@ -7,6 +7,7 @@ import '../../core/utils/number_parser.dart';
 import '../../models/product_model.dart';
 import '../../models/product_variant_model.dart';
 import '../../providers/inventory_provider.dart';
+import 'categories_management_dialog.dart';
 
 class ProductFormDialog extends StatefulWidget {
   final ProductModel? existingProduct;
@@ -24,6 +25,7 @@ class _VariantEntry {
   final TextEditingController costCtrl;
   final TextEditingController priceCtrl;
   final TextEditingController stockCtrl;
+  final TextEditingController minAlertCtrl;
   final TextEditingController barcodeCtrl;
 
   _VariantEntry({
@@ -33,13 +35,17 @@ class _VariantEntry {
     String cost = '',
     String price = '',
     String stock = '',
+    String minAlert = '2',
     String barcode = '',
   })  : sizeCtrl = TextEditingController(text: size),
         colorCtrl = TextEditingController(text: color),
         costCtrl = TextEditingController(text: cost),
         priceCtrl = TextEditingController(text: price),
         stockCtrl = TextEditingController(text: stock),
-        barcodeCtrl = TextEditingController(text: barcode.isNotEmpty ? barcode : BarcodeService.generateUniqueBarcode());
+        minAlertCtrl = TextEditingController(text: minAlert),
+        barcodeCtrl = TextEditingController(
+          text: barcode.isNotEmpty ? barcode : BarcodeService.generateUniqueBarcode(),
+        );
 
   void dispose() {
     sizeCtrl.dispose();
@@ -47,6 +53,7 @@ class _VariantEntry {
     costCtrl.dispose();
     priceCtrl.dispose();
     stockCtrl.dispose();
+    minAlertCtrl.dispose();
     barcodeCtrl.dispose();
   }
 }
@@ -55,6 +62,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
+  final TextEditingController _defaultMinAlertController = TextEditingController(text: '2');
   int? _selectedCategoryId;
   final List<_VariantEntry> _variants = [];
   bool _isSaving = false;
@@ -68,6 +76,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       _descController.text = p.description;
       _selectedCategoryId = p.categoryId;
 
+      if (p.variants.isNotEmpty) {
+        _defaultMinAlertController.text = p.variants.first.minStockAlert.toString();
+      }
+
       for (final v in p.variants) {
         _variants.add(_VariantEntry(
           id: v.id,
@@ -76,6 +88,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
           cost: v.costPrice.toStringAsFixed(0),
           price: v.sellingPrice.toStringAsFixed(0),
           stock: v.stockQuantity.toString(),
+          minAlert: v.minStockAlert.toString(),
           barcode: v.skuBarcode,
         ));
       }
@@ -87,14 +100,35 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
 
   void _addVariantRow() {
     setState(() {
+      final alertVal = _defaultMinAlertController.text.trim().isNotEmpty
+          ? _defaultMinAlertController.text.trim()
+          : '2';
       _variants.add(_VariantEntry(
         size: 'M',
         color: 'أسود',
         cost: '100',
         price: '180',
         stock: '10',
+        minAlert: alertVal,
       ));
     });
+  }
+
+  void _applyDefaultMinAlertToAll() {
+    final alertVal = _defaultMinAlertController.text.trim().isNotEmpty
+        ? _defaultMinAlertController.text.trim()
+        : '2';
+    setState(() {
+      for (final v in _variants) {
+        v.minAlertCtrl.text = alertVal;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('تم تطبيق حد التنبيه ($alertVal) على جميع المتغيرات'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _removeVariantRow(int index) {
@@ -110,6 +144,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   void dispose() {
     _nameController.dispose();
     _descController.dispose();
+    _defaultMinAlertController.dispose();
     for (final v in _variants) {
       v.dispose();
     }
@@ -148,7 +183,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
           costPrice: NumberParser.tryParseDouble(v.costCtrl.text.trim(), 0.0),
           sellingPrice: NumberParser.tryParseDouble(v.priceCtrl.text.trim(), 0.0),
           stockQuantity: NumberParser.tryParseInt(v.stockCtrl.text.trim(), 0),
-          minStockAlert: 2,
+          minStockAlert: NumberParser.tryParseInt(v.minAlertCtrl.text.trim(), 2),
         );
       }).toList();
 
@@ -186,11 +221,18 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 850, maxHeight: 700),
+        constraints: const BoxConstraints(maxWidth: 960, maxHeight: 720),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: colors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -202,9 +244,26 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.existingProduct != null ? AppStrings.editProduct : AppStrings.addNewProduct,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          widget.existingProduct != null ? Icons.edit_note_rounded : Icons.add_business_rounded,
+                          color: colors.primaryLight,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        widget.existingProduct != null ? AppStrings.editProduct : AppStrings.addNewProduct,
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                      ),
+                    ],
                   ),
                   IconButton(
                     icon: Icon(Icons.close, size: 20, color: colors.textMuted),
@@ -216,7 +275,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
 
               // Product Main Info (Row 1)
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Product Name
                   Expanded(
                     flex: 3,
                     child: TextFormField(
@@ -228,35 +289,88 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       validator: (val) => val == null || val.trim().isEmpty ? 'يرجى إدخال اسم المنتج' : null,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
+
+                  // Category Selector with inline Manage button
                   Expanded(
                     flex: 2,
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _selectedCategoryId,
-                      decoration: const InputDecoration(labelText: AppStrings.category),
-                      items: categories.map((cat) {
-                        return DropdownMenuItem<int>(
-                          value: cat.id,
-                          child: Text(cat.name),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() => _selectedCategoryId = val);
-                      },
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            initialValue: categories.any((c) => c.id == _selectedCategoryId)
+                                ? _selectedCategoryId
+                                : (categories.isNotEmpty ? categories.first.id : null),
+                            decoration: const InputDecoration(labelText: AppStrings.category),
+                            items: categories.map((cat) {
+                              return DropdownMenuItem<int>(
+                                value: cat.id,
+                                child: Text(cat.name, overflow: TextOverflow.ellipsis),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setState(() => _selectedCategoryId = val);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          padding: const EdgeInsets.all(12),
+                          icon: const Icon(Icons.settings_outlined, size: 20, color: AppColors.primary),
+                          tooltip: 'إدارة وتعديل التصنيفات',
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const CategoriesManagementDialog(),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Default Low Stock Alert Input
+                  Expanded(
+                    flex: 2,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _defaultMinAlertController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'حد تنبيه النقص الافتراضي',
+                              hintText: '2',
+                              helperText: 'العدد للتنبيه بنقص المخزون',
+                            ),
+                            validator: (val) => val == null || val.trim().isEmpty ? 'مطلوب' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          padding: const EdgeInsets.all(12),
+                          icon: const Icon(Icons.playlist_add_check_rounded, size: 20, color: AppColors.secondary),
+                          tooltip: 'تطبيق حد التنبيه على كل الصفوف',
+                          onPressed: _applyDefaultMinAlertToAll,
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // Variants Section Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'مصفوفة المتغيرات (المقاسات والألوان والأسعار والباركود)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colors.primaryLight),
+                    'مصفوفة المتغيرات (المقاسات والألوان والأسعار وحد التنبيه والباركود)',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.primaryLight),
                   ),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -291,7 +405,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                     const SizedBox(width: 8),
                     Expanded(flex: 2, child: Text('سعر البيع', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 8),
-                    Expanded(flex: 2, child: Text('الكمية', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
+                    Expanded(flex: 2, child: Text('الكمية الحالية', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
+                    const SizedBox(width: 8),
+                    Expanded(flex: 2, child: Text('حد تنبيه النقص', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.primaryLight))),
                     const SizedBox(width: 8),
                     Expanded(flex: 3, child: Text('الباركود SKU', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 40),
@@ -310,6 +426,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                     final v = _variants[index];
                     return Row(
                       children: [
+                        // Size
                         Expanded(
                           flex: 2,
                           child: TextFormField(
@@ -319,6 +436,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
+
+                        // Color
                         Expanded(
                           flex: 2,
                           child: TextFormField(
@@ -328,6 +447,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
+
+                        // Cost Price
                         Expanded(
                           flex: 2,
                           child: TextFormField(
@@ -338,6 +459,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
+
+                        // Selling Price
                         Expanded(
                           flex: 2,
                           child: TextFormField(
@@ -348,6 +471,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
+
+                        // Current Stock Quantity
                         Expanded(
                           flex: 2,
                           child: TextFormField(
@@ -358,6 +483,23 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
+
+                        // Min Stock Alert Threshold
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: v.minAlertCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: '2',
+                              prefixIcon: const Icon(Icons.notifications_active_outlined, size: 14, color: AppColors.warning),
+                            ),
+                            validator: (val) => val!.isEmpty ? 'مطلوب' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Barcode SKU
                         Expanded(
                           flex: 3,
                           child: TextFormField(
@@ -375,8 +517,11 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
+
+                        // Delete Row Button
                         IconButton(
                           icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                          tooltip: 'حذف هذا المتغير',
                           onPressed: _variants.length > 1 ? () => _removeVariantRow(index) : null,
                         ),
                       ],

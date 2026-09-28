@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
-import '../../core/services/print_service.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/number_parser.dart';
@@ -178,18 +177,11 @@ class _ShiftsViewState extends State<ShiftsView> {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(backgroundColor: colors.primary),
                 icon: const Icon(Icons.lock_clock, size: 18),
-                label: const Text('إغلاق وطباعة التقرير'),
+                label: const Text(AppStrings.closeShift),
                 onPressed: () async {
                   final actualVal = NumberParser.tryParseDouble(actualCashController.text.trim(), 0.0);
-                  final closed = await context.read<ShiftProvider>().endShift(actualVal);
+                  await context.read<ShiftProvider>().endShift(actualVal);
                   if (ctx.mounted) Navigator.of(ctx).pop();
-
-                  if (closed != null) {
-                    await PrintService.printShiftSummary(
-                      shift: closed,
-                      settings: settings,
-                    );
-                  }
                 },
               ),
             ],
@@ -421,14 +413,6 @@ class _ShiftsViewState extends State<ShiftsView> {
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.textPrimary),
                                 ),
                               ),
-                              if (!item.isOpen)
-                                IconButton(
-                                  icon: Icon(Icons.print_outlined, size: 18, color: colors.primary),
-                                  tooltip: AppStrings.printShiftSummary,
-                                  onPressed: () {
-                                    PrintService.printShiftSummary(shift: item, settings: settings);
-                                  },
-                                ),
                             ],
                           ),
                         );

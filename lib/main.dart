@@ -8,6 +8,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/constants/app_strings.dart';
 import 'core/constants/app_styles.dart';
 import 'core/database/database_helper.dart';
+import 'core/services/app_info_service.dart';
+import 'models/store_settings_model.dart';
 import 'providers/auth_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/invoices_provider.dart';
@@ -20,13 +22,16 @@ import 'views/main_layout.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppInfoService.init();
 
   // Suppress Flutter Desktop hardware keyboard sync assertion bug in debug mode
   FlutterError.onError = (FlutterErrorDetails details) {
     final message = details.exception.toString();
     if (message.contains('hardware_keyboard.dart') ||
         message.contains('_pressedKeys.containsKey') ||
-        message.contains('KeyDownEvent is dispatched, but the state shows that the physical key is already pressed')) {
+        message.contains(
+          'KeyDownEvent is dispatched, but the state shows that the physical key is already pressed',
+        )) {
       // Ignored: Known platform duplicate key-down assertion on macOS/desktop
       return;
     }
@@ -42,18 +47,29 @@ void main() async {
   // Pre-initialize database
   await DatabaseHelper.instance.database;
 
-  runApp(const ClothingStoreApp());
+  // Pre-load store settings to establish theme before first frame renders
+  StoreSettingsModel? initialSettings;
+  try {
+    initialSettings = await DatabaseHelper.instance.getStoreSettings();
+  } catch (e) {
+    debugPrint('Error preloading settings: $e');
+  }
+
+  runApp(ClothingStoreApp(initialSettings: initialSettings));
 }
 
 class ClothingStoreApp extends StatelessWidget {
-  const ClothingStoreApp({super.key});
+  final StoreSettingsModel? initialSettings;
+  const ClothingStoreApp({super.key, this.initialSettings});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(
+          create: (_) => SettingsProvider(initialSettings: initialSettings),
+        ),
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         ChangeNotifierProvider(create: (_) => POSProvider()),
         ChangeNotifierProvider(create: (_) => ShiftProvider()),

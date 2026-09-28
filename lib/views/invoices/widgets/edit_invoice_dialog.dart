@@ -6,11 +6,13 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/number_parser.dart';
 import '../../../models/order_item_model.dart';
 import '../../../models/order_model.dart';
-import '../../../providers/invoices_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/inventory_provider.dart';
+import '../../../providers/invoices_provider.dart';
+import '../../../providers/pos_provider.dart';
+import '../../../providers/reports_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
-import '../../../providers/auth_provider.dart';
 
 class EditInvoiceDialog extends StatefulWidget {
   final OrderModel order;
@@ -161,10 +163,14 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
     );
 
     if (success) {
-      // Reload inventory & active shift
+      // Reload inventory & active shift & reports & pos
       await inventoryProv.loadInventory();
       final cashierId = auth.currentUser?.id ?? 1;
       await shift.checkActiveShift(cashierId);
+      if (mounted) {
+        context.read<ReportsProvider>().loadReports();
+        context.read<POSProvider>().loadPOSData();
+      }
 
       if (mounted) {
         setState(() => _isSaving = false);

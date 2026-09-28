@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/number_parser.dart';
 import '../../../providers/pos_provider.dart';
+import '../../../providers/settings_provider.dart';
 
 class BarcodeSearchBar extends StatefulWidget {
   const BarcodeSearchBar({super.key});
@@ -54,12 +56,49 @@ class _BarcodeSearchBarState extends State<BarcodeSearchBar> {
   @override
   Widget build(BuildContext context) {
     final pos = context.watch<POSProvider>();
+    final settings = context.watch<SettingsProvider>().settings;
     final colors = context.colors;
+    final hasLogo = settings.logoPath != null && File(settings.logoPath!).existsSync();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
+          if (hasLogo) ...[
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(left: 10),
+              decoration: BoxDecoration(
+                color: colors.cardSurface,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colors.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.file(
+                      File(settings.logoPath!),
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    settings.storeName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Expanded(
             child: TextField(
               controller: _controller,

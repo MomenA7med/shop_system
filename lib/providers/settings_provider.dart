@@ -4,16 +4,24 @@ import '../models/user_model.dart';
 import '../core/database/database_helper.dart';
 
 class SettingsProvider with ChangeNotifier {
-  StoreSettingsModel _settings = StoreSettingsModel(
-    storeName: 'محل الأناقة للأزياء والملابس',
-    slogan: 'أجود الخامات وأحدث صيحات الموضة',
-    phone: '01012345678',
-    address: 'شارع الجمهورية - أمام مول المدينة',
-    currencySymbol: 'ج.م',
-  );
+  StoreSettingsModel _settings;
   List<UserModel> _users = [];
   bool _isLoading = false;
-  ThemeMode _themeMode = ThemeMode.dark;
+  late ThemeMode _themeMode;
+
+  SettingsProvider({StoreSettingsModel? initialSettings})
+      : _settings = initialSettings ??
+            StoreSettingsModel(
+              storeName: 'محل الأناقة للأزياء والملابس',
+              slogan: 'أجود الخامات وأحدث صيحات الموضة',
+              phone: '01012345678',
+              address: 'شارع الجمهورية - أمام مول المدينة',
+              currencySymbol: 'ج.م',
+              themeMode: 'light',
+            ) {
+    _themeMode = _parseThemeMode(_settings.themeMode);
+    loadSettings();
+  }
 
   StoreSettingsModel get settings => _settings;
   List<UserModel> get users => _users;

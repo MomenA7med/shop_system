@@ -5,11 +5,13 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../models/order_model.dart';
-import '../../../providers/invoices_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/inventory_provider.dart';
+import '../../../providers/invoices_provider.dart';
+import '../../../providers/pos_provider.dart';
+import '../../../providers/reports_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
-import '../../../providers/auth_provider.dart';
 import '../../pos/widgets/receipt_preview_modal.dart';
 import 'edit_invoice_dialog.dart';
 import 'invoice_return_dialog.dart';
@@ -19,27 +21,23 @@ class InvoiceDetailsDialog extends StatelessWidget {
 
   const InvoiceDetailsDialog({super.key, required this.order});
 
-  Color _getStatusColor(String status, AppColorsExtension colors) {
-    switch (status) {
-      case 'refunded':
-        return colors.error;
-      case 'partially_refunded':
-        return colors.warning;
-      case 'completed':
-      default:
-        return colors.success;
+  Color _getStatusColor(OrderModel order, AppColorsExtension colors) {
+    if (order.isFullyRefunded) {
+      return colors.error;
+    } else if (order.isPartiallyRefunded) {
+      return colors.warning;
+    } else {
+      return colors.success;
     }
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'refunded':
-        return 'مسترجعة بالكامل';
-      case 'partially_refunded':
-        return 'مسترجعة جزئياً';
-      case 'completed':
-      default:
-        return 'مكتملة وناجحة';
+  String _getStatusLabel(OrderModel order) {
+    if (order.isFullyRefunded) {
+      return 'مسترجعة بالكامل';
+    } else if (order.isPartiallyRefunded) {
+      return 'مسترجعة جزئياً';
+    } else {
+      return 'مكتملة وناجحة';
     }
   }
 
@@ -80,8 +78,9 @@ class InvoiceDetailsDialog extends StatelessWidget {
                 await inventoryProv.loadInventory();
                 final cashierId = auth.currentUser?.id ?? 1;
                 await shift.checkActiveShift(cashierId);
-
                 if (context.mounted) {
+                  context.read<ReportsProvider>().loadReports();
+                  context.read<POSProvider>().loadPOSData();
                   Navigator.of(context).pop(); // Close details dialog
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -103,7 +102,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final settings = context.watch<SettingsProvider>().settings;
-    final statusColor = _getStatusColor(order.status, colors);
+    final statusColor = _getStatusColor(order, colors);
 
     return AlertDialog(
       backgroundColor: colors.surface,
@@ -143,7 +142,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
                           border: Border.all(color: statusColor.withValues(alpha: 0.5)),
                         ),
                         child: Text(
-                          _getStatusLabel(order.status),
+                          _getStatusLabel(order),
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
                         ),
                       ),
@@ -165,7 +164,7 @@ class InvoiceDetailsDialog extends StatelessWidget {
         ],
       ),
       content: SizedBox(
-        width: 720,
+        width: 740,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,8 +184,8 @@ class InvoiceDetailsDialog extends StatelessWidget {
                   Expanded(flex: 4, child: Text('المنتج والمواصفات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
                   Expanded(flex: 2, child: Text('الباركود SKU', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
                   Expanded(flex: 2, child: Text('سعر القطعة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
-                  Expanded(flex: 2, child: Text('الكمية', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
-                  Expanded(flex: 2, child: Text('الإجمالي', textAlign: TextAlign.end, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
+                  Expanded(flex: 3, child: Text('الكمية والمتبقي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
+                  Expanded(flex: 2, child: Text('الإجمالي الصافي', textAlign: TextAlign.end, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textSecondary))),
                 ],
               ),
             ),
@@ -244,43 +243,84 @@ class InvoiceDetailsDialog extends StatelessWidget {
 
                         // Qty + Returned badge
                         Expanded(
-                          flex: 2,
-                          child: Row(
-                            children: [
-                              Text(
-                                '${item.quantity}',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colors.textPrimary),
-                              ),
-                              if (item.returnedQuantity > 0) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: colors.warning.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    'رجوع ${item.returnedQuantity}',
-                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: colors.warning),
-                                  ),
+                          flex: 3,
+                          child: item.returnedQuantity > 0
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '${item.remainingQuantity} متبقي',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: item.remainingQuantity == 0 ? colors.error : colors.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: colors.warning.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'مرتجع ${item.returnedQuantity}',
+                                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: colors.warning),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      'الكمية الأصلية: ${item.quantity}',
+                                      style: TextStyle(fontSize: 10, color: colors.textMuted),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  '${item.quantity} قطع',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colors.textPrimary),
                                 ),
-                              ],
-                            ],
-                          ),
                         ),
 
                         // Total Price
                         Expanded(
                           flex: 2,
-                          child: Text(
-                            CurrencyFormatter.format(item.totalPrice, symbol: settings.currencySymbol),
-                            textAlign: TextAlign.end,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: colors.isDark ? colors.primaryLight : colors.primaryDark,
-                            ),
-                          ),
+                          child: item.returnedQuantity > 0
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      CurrencyFormatter.format(item.netTotalPrice, symbol: settings.currencySymbol),
+                                      textAlign: TextAlign.end,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                      ),
+                                    ),
+                                    Text(
+                                      'مسترد: ${CurrencyFormatter.formatSimple(item.refundedAmount)}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: colors.error,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  CurrencyFormatter.format(item.totalPrice, symbol: settings.currencySymbol),
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -302,16 +342,28 @@ class InvoiceDetailsDialog extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatItem('إجمالي الفاتورة', CurrencyFormatter.format(order.totalAmount, symbol: settings.currencySymbol), colors.primary, colors),
+                  if (order.hasReturns) ...[
+                    _buildStatItem('الإجمالي الأصلي', CurrencyFormatter.format(order.totalAmount, symbol: settings.currencySymbol), colors.textSecondary, colors),
+                    _buildStatItem('المسترجع (-)', '- ${CurrencyFormatter.format(order.refundedAmount, symbol: settings.currencySymbol)}', colors.error, colors),
+                    _buildStatItem('الصافي النهائي', CurrencyFormatter.format(order.netTotalAmount, symbol: settings.currencySymbol), colors.primary, colors),
+                  ] else ...[
+                    _buildStatItem('إجمالي الفاتورة', CurrencyFormatter.format(order.totalAmount, symbol: settings.currencySymbol), colors.primary, colors),
+                  ],
                   _buildStatItem('المبلغ المستلم', CurrencyFormatter.format(order.amountPaid, symbol: settings.currencySymbol), colors.textPrimary, colors),
                   _buildStatItem('الباقي للعميل', CurrencyFormatter.format(order.changeDue, symbol: settings.currencySymbol), order.changeDue > 0 ? colors.info : colors.textMuted, colors),
-                  _buildStatItem('إجمالي القطع', '${order.totalItemCount} قطعة', colors.textSecondary, colors),
+                  _buildStatItem(
+                    'القطع المتبقية',
+                    order.hasReturns ? '${order.remainingPieces} من ${order.totalPieces} قطعة' : '${order.totalPieces} قطعة',
+                    order.hasReturns ? colors.warning : colors.textSecondary,
+                    colors,
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         // Delete invoice button (Admin / Cashier)
         TextButton.icon(
@@ -321,66 +373,68 @@ class InvoiceDetailsDialog extends StatelessWidget {
           onPressed: () => _confirmDeleteInvoice(context),
         ),
 
-        const Spacer(),
+        // Action Buttons
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.end,
+          children: [
+            // Action 1: Print / Preview Receipt
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: colors.textPrimary),
+              icon: const Icon(Icons.print_outlined, size: 18),
+              label: const Text('طباعة إيصال'),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => ReceiptPreviewModal(
+                    order: order,
+                    settings: settings,
+                  ),
+                );
+              },
+            ),
 
-        // Action 1: Print / Preview Receipt
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(foregroundColor: colors.textPrimary),
-          icon: const Icon(Icons.print_outlined, size: 18),
-          label: const Text('طباعة إيصال'),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (_) => ReceiptPreviewModal(
-                order: order,
-                settings: settings,
+            // Action 2: Process Return
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.warning,
+                foregroundColor: Colors.black87,
               ),
-            );
-          },
-        ),
+              icon: const Icon(Icons.assignment_return, size: 18),
+              label: const Text('عمل مرتجع', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: order.items.any((i) => i.remainingQuantity > 0)
+                  ? () async {
+                      final returned = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => InvoiceReturnDialog(order: order),
+                      );
+                      if (returned == true && context.mounted) {
+                        Navigator.of(context).pop(); // Close details dialog after return
+                      }
+                    }
+                  : null,
+            ),
 
-        const SizedBox(width: 8),
-
-        // Action 2: Process Return
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colors.warning,
-            foregroundColor: Colors.black87,
-          ),
-          icon: const Icon(Icons.assignment_return, size: 18),
-          label: const Text('عمل مرتجع', style: TextStyle(fontWeight: FontWeight.bold)),
-          onPressed: order.items.any((i) => i.remainingQuantity > 0)
-              ? () async {
-                  final returned = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => InvoiceReturnDialog(order: order),
-                  );
-                  if (returned == true && context.mounted) {
-                    Navigator.of(context).pop(); // Close details dialog after return
-                  }
+            // Action 3: Edit Invoice
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('تعديل الفاتورة', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                final edited = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => EditInvoiceDialog(order: order),
+                );
+                if (edited == true && context.mounted) {
+                  Navigator.of(context).pop(); // Close details dialog after edit
                 }
-              : null,
-        ),
-
-        const SizedBox(width: 8),
-
-        // Action 3: Edit Invoice
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colors.primary,
-            foregroundColor: Colors.white,
-          ),
-          icon: const Icon(Icons.edit, size: 18),
-          label: const Text('تعديل الفاتورة', style: TextStyle(fontWeight: FontWeight.bold)),
-          onPressed: () async {
-            final edited = await showDialog<bool>(
-              context: context,
-              builder: (_) => EditInvoiceDialog(order: order),
-            );
-            if (edited == true && context.mounted) {
-              Navigator.of(context).pop(); // Close details dialog after edit
-            }
-          },
+              },
+            ),
+          ],
         ),
       ],
     );

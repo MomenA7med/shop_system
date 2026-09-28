@@ -1,6 +1,7 @@
 class ProductVariantModel {
   final int? id;
   final int productId;
+  final String? productName;
   final String skuBarcode;
   final String size;
   final String color;
@@ -12,6 +13,7 @@ class ProductVariantModel {
   ProductVariantModel({
     this.id,
     required this.productId,
+    this.productName,
     required this.skuBarcode,
     required this.size,
     required this.color,
@@ -39,10 +41,11 @@ class ProductVariantModel {
     };
   }
 
-  factory ProductVariantModel.fromMap(Map<String, dynamic> map) {
+  factory ProductVariantModel.fromMap(Map<String, dynamic> map, {String? productName}) {
     return ProductVariantModel(
       id: map['id'] as int?,
       productId: map['product_id'] as int,
+      productName: productName ?? map['product_name'] as String?,
       skuBarcode: map['sku_barcode'] as String,
       size: map['size'] as String,
       color: map['color'] as String,
@@ -56,6 +59,7 @@ class ProductVariantModel {
   ProductVariantModel copyWith({
     int? id,
     int? productId,
+    String? productName,
     String? skuBarcode,
     String? size,
     String? color,
@@ -67,6 +71,7 @@ class ProductVariantModel {
     return ProductVariantModel(
       id: id ?? this.id,
       productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
       skuBarcode: skuBarcode ?? this.skuBarcode,
       size: size ?? this.size,
       color: color ?? this.color,

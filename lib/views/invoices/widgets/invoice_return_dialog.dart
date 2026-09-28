@@ -4,8 +4,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../models/order_model.dart';
-import '../../../providers/invoices_provider.dart';
 import '../../../providers/inventory_provider.dart';
+import '../../../providers/invoices_provider.dart';
+import '../../../providers/pos_provider.dart';
+import '../../../providers/reports_provider.dart';
 import '../../../providers/returns_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
@@ -78,6 +80,7 @@ class _InvoiceReturnDialogState extends State<InvoiceReturnDialog> {
     final shiftId = shift.activeShift?.id;
 
     int successCount = 0;
+    double actualRefundAmount = 0.0;
 
     for (final item in widget.order.items) {
       if (item.id != null) {
@@ -89,41 +92,58 @@ class _InvoiceReturnDialogState extends State<InvoiceReturnDialog> {
             returnQty: qty,
             reason: reason,
             shiftId: shiftId,
+            orderId: widget.order.id,
+            invoiceNumber: widget.order.invoiceNumber,
           );
           if (success) {
             successCount += qty;
+            actualRefundAmount += item.unitPrice * qty;
           }
         }
       }
     }
 
-    // Refresh active shift & inventory & invoices
+    // Refresh active shift & inventory & invoices & reports & pos
     if (shift.activeShift != null) {
       await shift.checkActiveShift(shift.activeShift!.cashierId);
     }
     await inventoryProv.loadInventory();
     await invoicesProv.loadInvoices();
+    if (mounted) {
+      context.read<ReportsProvider>().loadReports();
+      context.read<POSProvider>().loadPOSData();
+    }
 
     if (mounted) {
       setState(() => _isProcessing = false);
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(successCount > 0);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'تم إرجاع $successCount قطعة واسترداد ${CurrencyFormatter.formatSimple(_calculateTotalRefund())} بنجاح',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
+      if (successCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'تم إرجاع $successCount قطعة واسترداد ${CurrencyFormatter.formatSimple(actualRefundAmount)} بنجاح',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(returnsProv.errorMessage ?? 'فشلت معالجة المرتجع'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

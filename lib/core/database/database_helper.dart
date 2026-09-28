@@ -39,19 +39,49 @@ class DatabaseHelper {
     final db = await openDatabase(
       path,
       version: 1,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _createDB,
     );
 
-    await _ensureThemeColumnExists(db);
+    await _ensureSettingsColumnsExist(db);
+    await _cleanupOrphanedProducts(db);
     return db;
   }
 
-  Future<void> _ensureThemeColumnExists(Database db) async {
+  Future<void> _cleanupOrphanedProducts(Database db) async {
+    try {
+      await db.execute('''
+        DELETE FROM product_variants 
+        WHERE product_id IN (
+          SELECT id FROM products WHERE category_id NOT IN (SELECT id FROM categories)
+        )
+      ''');
+      await db.execute('''
+        DELETE FROM products 
+        WHERE category_id NOT IN (SELECT id FROM categories)
+      ''');
+    } catch (e) {
+      debugPrint('Error cleaning up orphaned products: $e');
+    }
+  }
+
+  Future<void> cleanupOrphanedProducts() async {
+    final db = await database;
+    await _cleanupOrphanedProducts(db);
+  }
+
+  Future<void> _ensureSettingsColumnsExist(Database db) async {
     try {
       final info = await db.rawQuery('PRAGMA table_info(store_settings)');
       final hasTheme = info.any((col) => col['name'] == 'theme_mode');
       if (!hasTheme) {
         await db.execute("ALTER TABLE store_settings ADD COLUMN theme_mode TEXT DEFAULT 'dark'");
+      }
+      final hasLogo = info.any((col) => col['name'] == 'logo_path');
+      if (!hasLogo) {
+        await db.execute("ALTER TABLE store_settings ADD COLUMN logo_path TEXT");
       }
     } catch (_) {}
   }
@@ -82,7 +112,8 @@ class DatabaseHelper {
         currency_symbol TEXT DEFAULT 'ج.م',
         receipt_footer TEXT,
         tax_rate_percent REAL DEFAULT 0.0,
-        theme_mode TEXT DEFAULT 'dark'
+        theme_mode TEXT DEFAULT 'dark',
+        logo_path TEXT
       )
     ''');
 
@@ -250,10 +281,12 @@ class DatabaseHelper {
 
   Future<int> updateStoreSettings(StoreSettingsModel settings) async {
     final db = await database;
-    return await db.update(
+    final map = settings.toMap();
+    map['id'] = 1;
+    return await db.insert(
       'store_settings',
-      settings.toMap(),
-      where: 'id = 1',
+      map,
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -266,12 +299,72 @@ class DatabaseHelper {
 
   Future<int> insertCategory(String name) async {
     final db = await database;
-    return await db.insert('categories', {'name': name});
+    return await db.insert('categories', {'name': name.trim()});
+  }
+
+  Future<int> updateCategory(int id, String name) async {
+    final db = await database;
+    return await db.update(
+      'categories',
+      {'name': name.trim()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> deleteCategory(int id) async {
     final db = await database;
-    return await db.delete('categories', where: 'id = ?', whereArgs: [id]);
+    try {
+      await db.execute('PRAGMA foreign_keys = OFF');
+      final res = await db.transaction<int>((txn) async {
+        final productRows = await txn.query(
+          'products',
+          columns: ['id'],
+          where: 'category_id = ?',
+          whereArgs: [id],
+        );
+        for (final row in productRows) {
+          final prodId = row['id'] as int;
+          await txn.delete(
+            'product_variants',
+            where: 'product_id = ?',
+            whereArgs: [prodId],
+          );
+        }
+        await txn.delete(
+          'products',
+          where: 'category_id = ?',
+          whereArgs: [id],
+        );
+        return await txn.delete('categories', where: 'id = ?', whereArgs: [id]);
+      });
+      return res;
+    } finally {
+      await db.execute('PRAGMA foreign_keys = ON');
+    }
+  }
+
+  Future<int> getProductCountByCategory(int categoryId) async {
+    final db = await database;
+    final res = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM products WHERE category_id = ?',
+      [categoryId],
+    );
+    if (res.isNotEmpty) {
+      return (res.first['count'] as num?)?.toInt() ?? 0;
+    }
+    return 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getCategoriesWithProductCount() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT c.id, c.name, COUNT(p.id) as product_count
+      FROM categories c
+      LEFT JOIN products p ON c.id = p.category_id
+      GROUP BY c.id, c.name
+      ORDER BY c.name ASC
+    ''');
   }
 
   // ================= PRODUCTS & VARIANTS =================
@@ -313,7 +406,7 @@ class DatabaseHelper {
         whereArgs: [pId],
         orderBy: 'id ASC',
       );
-      final variants = variantRows.map((v) => ProductVariantModel.fromMap(v)).toList();
+      final variants = variantRows.map((v) => ProductVariantModel.fromMap(v, productName: row['name'] as String?)).toList();
 
       products.add(ProductModel.fromMap(
         row,
@@ -433,16 +526,27 @@ class DatabaseHelper {
 
   Future<int> deleteProduct(int id) async {
     final db = await database;
-    return await db.delete('products', where: 'id = ?', whereArgs: [id]);
+    try {
+      await db.execute('PRAGMA foreign_keys = OFF');
+      final res = await db.transaction<int>((txn) async {
+        await txn.delete('product_variants', where: 'product_id = ?', whereArgs: [id]);
+        return await txn.delete('products', where: 'id = ?', whereArgs: [id]);
+      });
+      return res;
+    } finally {
+      await db.execute('PRAGMA foreign_keys = ON');
+    }
   }
 
   Future<List<ProductVariantModel>> getLowStockVariants() async {
     final db = await database;
-    final res = await db.query(
-      'product_variants',
-      where: 'stock_quantity <= min_stock_alert',
-      orderBy: 'stock_quantity ASC',
-    );
+    final res = await db.rawQuery('''
+      SELECT pv.*, p.name as product_name
+      FROM product_variants pv
+      LEFT JOIN products p ON pv.product_id = p.id
+      WHERE pv.stock_quantity <= pv.min_stock_alert
+      ORDER BY pv.stock_quantity ASC
+    ''');
     return res.map((e) => ProductVariantModel.fromMap(e)).toList();
   }
 
@@ -958,16 +1062,68 @@ class DatabaseHelper {
   }
 
   // ================= FINANCIAL & INVENTORY REPORTS =================
-  Future<Map<String, dynamic>> getFinancialStats() async {
+  Future<Map<String, dynamic>> getFinancialStats({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final db = await database;
 
-    // Total Sales
+    String orderWhere = '';
+    List<dynamic> orderArgs = [];
+    if (startDate != null && endDate != null) {
+      orderWhere = 'WHERE created_at >= ? AND created_at <= ?';
+      orderArgs = [startDate.toIso8601String(), endDate.toIso8601String()];
+    } else if (startDate != null) {
+      orderWhere = 'WHERE created_at >= ?';
+      orderArgs = [startDate.toIso8601String()];
+    } else if (endDate != null) {
+      orderWhere = 'WHERE created_at <= ?';
+      orderArgs = [endDate.toIso8601String()];
+    }
+
+    String returnWhere = '';
+    List<dynamic> returnArgs = [];
+    if (startDate != null && endDate != null) {
+      returnWhere = 'WHERE created_at >= ? AND created_at <= ?';
+      returnArgs = [startDate.toIso8601String(), endDate.toIso8601String()];
+    } else if (startDate != null) {
+      returnWhere = 'WHERE created_at >= ?';
+      returnArgs = [startDate.toIso8601String()];
+    } else if (endDate != null) {
+      returnWhere = 'WHERE created_at <= ?';
+      returnArgs = [endDate.toIso8601String()];
+    }
+
+    String itemsWhere = '';
+    List<dynamic> itemsArgs = [];
+    if (startDate != null && endDate != null) {
+      itemsWhere = 'WHERE o.created_at >= ? AND o.created_at <= ?';
+      itemsArgs = [startDate.toIso8601String(), endDate.toIso8601String()];
+    } else if (startDate != null) {
+      itemsWhere = 'WHERE o.created_at >= ?';
+      itemsArgs = [startDate.toIso8601String()];
+    } else if (endDate != null) {
+      itemsWhere = 'WHERE o.created_at <= ?';
+      itemsArgs = [endDate.toIso8601String()];
+    }
+
+    // Total Sales & Orders
     final salesRes = await db.rawQuery('''
       SELECT 
         COALESCE(SUM(total_amount), 0.0) as total_sales,
         COUNT(id) as total_orders
       FROM orders
-    ''');
+      $orderWhere
+    ''', orderArgs);
+
+    // Payment Methods Breakdown (Cash / Card)
+    final methodsRes = await db.rawQuery('''
+      SELECT 
+        COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END), 0.0) as cash_sales,
+        COALESCE(SUM(CASE WHEN payment_method != 'cash' THEN total_amount ELSE 0 END), 0.0) as card_sales
+      FROM orders
+      $orderWhere
+    ''', orderArgs);
 
     // Total Returns
     final returnsRes = await db.rawQuery('''
@@ -975,18 +1131,23 @@ class DatabaseHelper {
         COALESCE(SUM(refund_amount), 0.0) as total_returns,
         COUNT(id) as return_count
       FROM returns
-    ''');
+      $returnWhere
+    ''', returnArgs);
 
-    // Net Profit Calculation = (Total Sold Items Revenue - Total Sold Items Cost) - Returns
+    // Net Profit & COGS Calculation = (Total Sold Items Revenue - Total Sold Items Cost)
     final profitRes = await db.rawQuery('''
       SELECT 
-        COALESCE(SUM((unit_price - cost_price) * (quantity - returned_quantity)), 0.0) as net_profit,
-        COALESCE(SUM(cost_price * (quantity - returned_quantity)), 0.0) as total_cogs
-      FROM order_items
-    ''');
+        COALESCE(SUM((oi.unit_price - oi.cost_price) * (oi.quantity - oi.returned_quantity)), 0.0) as net_profit,
+        COALESCE(SUM(oi.cost_price * (oi.quantity - oi.returned_quantity)), 0.0) as total_cogs
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      $itemsWhere
+    ''', itemsArgs);
 
     final totalSales = (salesRes.first['total_sales'] as num?)?.toDouble() ?? 0.0;
     final totalOrders = (salesRes.first['total_orders'] as int?) ?? 0;
+    final cashSales = (methodsRes.first['cash_sales'] as num?)?.toDouble() ?? 0.0;
+    final cardSales = (methodsRes.first['card_sales'] as num?)?.toDouble() ?? 0.0;
     final totalReturns = (returnsRes.first['total_returns'] as num?)?.toDouble() ?? 0.0;
     final returnCount = (returnsRes.first['return_count'] as int?) ?? 0;
     final netProfit = (profitRes.first['net_profit'] as num?)?.toDouble() ?? 0.0;
@@ -995,6 +1156,8 @@ class DatabaseHelper {
     return {
       'total_sales': totalSales,
       'total_orders': totalOrders,
+      'cash_sales': cashSales,
+      'card_sales': cardSales,
       'total_returns': totalReturns,
       'return_count': returnCount,
       'net_profit': netProfit,
@@ -1002,8 +1165,27 @@ class DatabaseHelper {
     };
   }
 
-  Future<List<Map<String, dynamic>>> getTopSellingProducts({int limit = 8}) async {
+  Future<List<Map<String, dynamic>>> getTopSellingProducts({
+    DateTime? startDate,
+    DateTime? endDate,
+    int limit = 10,
+  }) async {
     final db = await database;
+    String itemsWhere = '';
+    List<dynamic> args = [];
+    if (startDate != null && endDate != null) {
+      itemsWhere = 'WHERE o.created_at >= ? AND o.created_at <= ?';
+      args = [startDate.toIso8601String(), endDate.toIso8601String(), limit];
+    } else if (startDate != null) {
+      itemsWhere = 'WHERE o.created_at >= ?';
+      args = [startDate.toIso8601String(), limit];
+    } else if (endDate != null) {
+      itemsWhere = 'WHERE o.created_at <= ?';
+      args = [endDate.toIso8601String(), limit];
+    } else {
+      args = [limit];
+    }
+
     final res = await db.rawQuery('''
       SELECT 
         oi.product_name,
@@ -1013,11 +1195,49 @@ class DatabaseHelper {
         SUM(oi.quantity - oi.returned_quantity) as total_sold_qty,
         SUM((oi.unit_price) * (oi.quantity - oi.returned_quantity)) as total_revenue
       FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      $itemsWhere
       GROUP BY oi.variant_id
       HAVING total_sold_qty > 0
       ORDER BY total_sold_qty DESC
       LIMIT ?
-    ''', [limit]);
+    ''', args);
+
+    return res;
+  }
+
+  Future<List<Map<String, dynamic>>> getCategorySalesStats({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    String itemsWhere = '';
+    List<dynamic> args = [];
+    if (startDate != null && endDate != null) {
+      itemsWhere = 'WHERE o.created_at >= ? AND o.created_at <= ?';
+      args = [startDate.toIso8601String(), endDate.toIso8601String()];
+    } else if (startDate != null) {
+      itemsWhere = 'WHERE o.created_at >= ?';
+      args = [startDate.toIso8601String()];
+    } else if (endDate != null) {
+      itemsWhere = 'WHERE o.created_at <= ?';
+      args = [endDate.toIso8601String()];
+    }
+
+    final res = await db.rawQuery('''
+      SELECT 
+        COALESCE(c.name, 'عام') as category_name,
+        SUM(oi.quantity - oi.returned_quantity) as total_sold_qty,
+        SUM((oi.unit_price) * (oi.quantity - oi.returned_quantity)) as total_revenue
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN products p ON oi.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      $itemsWhere
+      GROUP BY p.category_id
+      HAVING total_sold_qty > 0
+      ORDER BY total_revenue DESC
+    ''', args);
 
     return res;
   }

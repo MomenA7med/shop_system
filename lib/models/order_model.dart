@@ -30,7 +30,23 @@ class OrderModel {
   }) : createdAt = createdAt ?? DateTime.now();
 
   double get totalProfit => items.fold(0.0, (sum, item) => sum + item.profit);
+  double get netProfit => items.fold(0.0, (sum, item) => sum + item.netProfit);
   int get totalItemCount => items.fold(0, (sum, item) => sum + item.quantity);
+  int get totalPieces => totalItemCount;
+  int get remainingItemCount => items.fold(0, (sum, item) => sum + item.remainingQuantity);
+  int get remainingPieces => remainingItemCount;
+  int get totalReturnedCount => items.fold(0, (sum, item) => sum + item.returnedQuantity);
+  int get totalReturnedPieces => totalReturnedCount;
+  int get activeItemsCount => items.where((i) => i.remainingQuantity > 0).length;
+  int get returnedItemsCount => items.where((i) => i.returnedQuantity > 0).length;
+  double get itemsSubtotal => items.fold(0.0, (sum, item) => sum + item.totalPrice);
+  double get netItemsSubtotal => items.fold(0.0, (sum, item) => sum + item.netTotalPrice);
+  double get refundedAmount => items.fold(0.0, (sum, item) => sum + item.refundedAmount);
+  double get netTotalAmount => (totalAmount - refundedAmount).clamp(0.0, double.infinity);
+  double get discountAmount => itemsSubtotal > totalAmount ? (itemsSubtotal - totalAmount) : 0.0;
+  bool get hasReturns => totalReturnedCount > 0 || status == 'refunded' || status == 'partially_refunded';
+  bool get isFullyRefunded => status == 'refunded' || (remainingPieces == 0 && totalPieces > 0);
+  bool get isPartiallyRefunded => status == 'partially_refunded' || (hasReturns && !isFullyRefunded);
 
   Map<String, dynamic> toMap() {
     return {
