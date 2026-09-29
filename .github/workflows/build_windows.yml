@@ -40,6 +40,14 @@ jobs:
       - name: Build Windows Release (.exe)
         run: flutter build windows --release
 
+      - name: Bundle Essential DLLs (d3dcompiler_47 & VC Runtime)
+        shell: pwsh
+        run: |
+          Copy-Item "C:\Windows\System32\d3dcompiler_47.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+          Copy-Item "C:\Windows\System32\vcruntime140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+          Copy-Item "C:\Windows\System32\vcruntime140_1.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+          Copy-Item "C:\Windows\System32\msvcp140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+
       - name: Compress Release Bundle into ZIP
         shell: pwsh
         run: |
