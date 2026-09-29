@@ -61,26 +61,6 @@ class ProductCardGrid extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.apps_rounded, size: 18),
-                  label: const Text(
-                    'عرض جميع الأصناف',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: () => pos.selectCategory(null),
-                ),
               ],
             ),
           ),

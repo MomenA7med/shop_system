@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/pos_provider.dart';
 import 'widgets/barcode_search_bar.dart';
-import 'widgets/category_filter_bar.dart';
 import 'widgets/cart_panel.dart';
 import 'widgets/product_card_grid.dart';
 
@@ -31,12 +30,11 @@ class _POSViewState extends State<POSView> {
       backgroundColor: colors.background,
       body: Row(
         children: const [
-          // 1. Main & Wide Right Area: Scanner Search Bar, Category/Quick Filters, and Full-Screen Cards Grid
+          // 1. Main & Wide Right Area: Scanner Search Bar and Full-Screen Quick Items Grid
           Expanded(
             child: Column(
               children: [
                 BarcodeSearchBar(),
-                CategoryFilterBar(),
                 Expanded(
                   child: ProductCardGrid(),
                 ),

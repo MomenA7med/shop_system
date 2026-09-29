@@ -19,9 +19,12 @@ class POSProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _statusMessage;
 
-  bool _isQuickFilterOnly = false;
+  bool _isQuickFilterOnly = true;
 
   List<ProductModel> get products {
+    if (_searchQuery.isNotEmpty) {
+      return _products;
+    }
     if (_isQuickFilterOnly) {
       return _products.where((p) => p.isQuickItem).toList();
     }
