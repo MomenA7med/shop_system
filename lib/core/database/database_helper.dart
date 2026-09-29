@@ -21,11 +21,7 @@ class DatabaseHelper {
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    if (_database != null) {
-      await _ensureOrdersDeliveryFeeColumnExists(_database!);
-      await _ensureProductsQuickItemColumnExists(_database!);
-      return _database!;
-    }
+    if (_database != null) return _database!;
     _database = await _initDB('clothing_store_pos.db');
     return _database!;
   }

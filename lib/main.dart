@@ -1,4 +1,3 @@
-import 'dart:ffi';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -32,27 +31,9 @@ void _logCrash(String text) {
   } catch (_) {}
 }
 
-/// Configure SQLite FFI with Windows fallback to built-in winsqlite3.dll
+/// Initialize SQLite FFI for desktop platforms
 void _setupSqliteFfi() {
   if (!kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
-    if (Platform.isWindows) {
-      try {
-        final exeDir = File(Platform.resolvedExecutable).parent.path;
-        final localDll = File('$exeDir\\sqlite3.dll');
-        if (localDll.existsSync()) {
-          DynamicLibrary.open(localDll.path);
-        } else {
-          try {
-            DynamicLibrary.open('sqlite3.dll');
-          } catch (_) {
-            DynamicLibrary.open('winsqlite3.dll');
-          }
-        }
-      } catch (e) {
-        debugPrint('Windows SQLite pre-load note: $e');
-      }
-    }
-
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
