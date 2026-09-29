@@ -6,6 +6,7 @@ import 'package:shop_system/core/constants/app_strings.dart';
 import 'package:shop_system/models/user_model.dart';
 import 'package:shop_system/providers/auth_provider.dart';
 import 'package:shop_system/providers/inventory_provider.dart';
+import 'package:shop_system/providers/license_provider.dart';
 import 'package:shop_system/views/inventory/inventory_view.dart';
 import 'package:shop_system/widgets/custom_sidebar.dart';
 import 'package:shop_system/providers/reports_provider.dart';
@@ -516,6 +517,7 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider.value(value: settingsProvider),
+          ChangeNotifierProvider(create: (_) => LicenseProvider(autoInit: false)),
         ],
         child: MaterialApp(
           home: Scaffold(

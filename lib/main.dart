@@ -13,6 +13,7 @@ import 'models/store_settings_model.dart';
 import 'providers/auth_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/invoices_provider.dart';
+import 'providers/license_provider.dart';
 import 'providers/pos_provider.dart';
 import 'providers/reports_provider.dart';
 import 'providers/returns_provider.dart';
@@ -67,6 +68,7 @@ class ClothingStoreApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => LicenseProvider()),
         ChangeNotifierProvider(
           create: (_) => SettingsProvider(initialSettings: initialSettings),
         ),

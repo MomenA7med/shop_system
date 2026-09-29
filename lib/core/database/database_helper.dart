@@ -46,6 +46,7 @@ class DatabaseHelper {
     );
 
     await _ensureSettingsColumnsExist(db);
+    await _ensureLicenseTableExists(db);
     await _cleanupOrphanedProducts(db);
     return db;
   }
@@ -86,12 +87,36 @@ class DatabaseHelper {
     } catch (_) {}
   }
 
+  Future<void> _ensureLicenseTableExists(Database db) async {
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS system_license (
+          id INTEGER PRIMARY KEY,
+          first_run_date TEXT NOT NULL,
+          activation_key TEXT,
+          is_activated INTEGER DEFAULT 0,
+          last_checked_date TEXT
+        )
+      ''');
+    } catch (_) {}
+  }
+
   Future<String> getDatabasePath() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     return join(dbFolder.path, 'clothing_store_pos.db');
   }
 
   Future<void> _createDB(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS system_license (
+        id INTEGER PRIMARY KEY,
+        first_run_date TEXT NOT NULL,
+        activation_key TEXT,
+        is_activated INTEGER DEFAULT 0,
+        last_checked_date TEXT
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1240,5 +1265,55 @@ class DatabaseHelper {
     ''', args);
 
     return res;
+  }
+
+  // ================= LICENSE METHODS =================
+
+  Future<Map<String, dynamic>?> getLicenseRecord() async {
+    final db = await database;
+    final res = await db.query('system_license', where: 'id = 1', limit: 1);
+    return res.isNotEmpty ? res.first : null;
+  }
+
+  Future<void> initLicenseRecord(String firstRunDate) async {
+    final db = await database;
+    await db.insert('system_license', {
+      'id': 1,
+      'first_run_date': firstRunDate,
+      'activation_key': null,
+      'is_activated': 0,
+      'last_checked_date': firstRunDate,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  Future<void> updateLicenseActivation(String activationKey, int isActivated) async {
+    final db = await database;
+    await db.update(
+      'system_license',
+      {
+        'activation_key': activationKey,
+        'is_activated': isActivated,
+        'last_checked_date': DateTime.now().toIso8601String(),
+      },
+      where: 'id = 1',
+    );
+  }
+
+  Future<void> updateLastCheckedDate(String lastCheckedDate) async {
+    final db = await database;
+    await db.update(
+      'system_license',
+      {'last_checked_date': lastCheckedDate},
+      where: 'id = 1',
+    );
+  }
+
+  Future<int> getTotalOrdersCount() async {
+    final db = await database;
+    final res = await db.rawQuery('SELECT COUNT(*) as count FROM orders');
+    if (res.isNotEmpty && res.first['count'] != null) {
+      return (res.first['count'] as num).toInt();
+    }
+    return 0;
   }
 }

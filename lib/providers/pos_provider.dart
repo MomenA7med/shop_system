@@ -5,6 +5,7 @@ import '../models/product_model.dart';
 import '../models/product_variant_model.dart';
 import '../models/category_model.dart';
 import '../core/database/database_helper.dart';
+import '../core/services/license_service.dart';
 import '../core/utils/number_parser.dart';
 
 class POSProvider with ChangeNotifier {
@@ -225,6 +226,13 @@ class POSProvider with ChangeNotifier {
     required int? shiftId,
   }) async {
     if (!canCheckout) return null;
+
+    final licenseStatus = await LicenseService.checkStatus();
+    if (!licenseStatus.canCreateInvoice) {
+      _statusMessage = licenseStatus.expirationReason ?? 'تم تجاوز الحد المسموح به للنسخة التجريبية. يرجى تفعيل البرنامج.';
+      notifyListeners();
+      return null;
+    }
 
     try {
       final order = await DatabaseHelper.instance.createOrderWithItems(

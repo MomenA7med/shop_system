@@ -9,9 +9,11 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../providers/invoices_provider.dart';
 import '../../../providers/pos_provider.dart';
+import '../../../providers/license_provider.dart';
 import '../../../providers/reports_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
+import '../../license/activation_dialog.dart';
 import 'receipt_preview_modal.dart';
 
 class CartPanel extends StatefulWidget {
@@ -93,18 +95,30 @@ class _CartPanelState extends State<CartPanel> {
 
     if (!pos.canCheckout) return;
 
+    final license = context.read<LicenseProvider>();
+    if (!license.isActivated && (license.isTrialExpired || license.totalInvoices >= license.maxTrialInvoices)) {
+      ActivationDialog.show(
+        context,
+        reason: license.status?.expirationReason ?? 'لقد وصلت إلى الحد الأقصى للنسخة التجريبية (5 فواتير).',
+      );
+      return;
+    }
+
     final cashierId = auth.currentUser?.id ?? 1;
     final shiftId = shift.activeShift?.id;
 
     final order = await pos.checkout(cashierId: cashierId, shiftId: shiftId);
 
     if (order != null && mounted) {
-      // 1. Reload active shift to reflect updated cash totals
+      // 1. Refresh license statistics (e.g. remaining invoices)
+      license.refresh();
+
+      // 2. Reload active shift to reflect updated cash totals
       if (shift.activeShift != null) {
         await shift.checkActiveShift(cashierId);
       }
 
-      // 2. Automatically refresh Invoices, Reports, and Inventory in background
+      // 3. Automatically refresh Invoices, Reports, and Inventory in background
       invoices.loadInvoices();
       reports.loadReports();
       inventory.loadInventory();

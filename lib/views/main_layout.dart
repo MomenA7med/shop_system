@@ -4,6 +4,7 @@ import '../core/constants/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/inventory_provider.dart';
 import '../providers/invoices_provider.dart';
+import '../providers/license_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/reports_provider.dart';
 import '../providers/returns_provider.dart';
@@ -19,6 +20,7 @@ import 'returns/returns_view.dart';
 import 'shifts/shifts_view.dart';
 import 'reports/reports_view.dart';
 import 'settings/settings_view.dart';
+import 'license/activation_dialog.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -119,6 +121,73 @@ class _MainLayoutState extends State<MainLayout> {
                 ),
               ],
             ),
+          ),
+
+          // Trial Version Bottom Watermark / Bar
+          Consumer<LicenseProvider>(
+            builder: (context, license, _) {
+              if (license.isActivated) return const SizedBox.shrink();
+
+              final isExpired = license.isTrialExpired;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isExpired
+                      ? AppColors.error.withValues(alpha: 0.12)
+                      : Colors.amber.withValues(alpha: 0.12),
+                  border: Border(
+                    top: BorderSide(
+                      color: isExpired
+                          ? AppColors.error.withValues(alpha: 0.3)
+                          : Colors.amber.shade700.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isExpired ? Icons.lock_clock_rounded : Icons.info_outline_rounded,
+                      size: 16,
+                      color: isExpired ? AppColors.error : Colors.amber.shade900,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isExpired
+                          ? (license.status?.expirationReason ?? 'نسخة تجريبية منتهية: يرجى تفعيل البرنامج لمتابعة إنشاء الفواتير.')
+                          : 'نسخة تجريبية: لا يمكنك إجراء أكثر من 5 فواتير (متبقي ${license.remainingInvoices} فواتير | ${license.daysRemaining} يوم)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isExpired ? AppColors.error : Colors.amber.shade900,
+                      ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () => ActivationDialog.show(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isExpired ? AppColors.error : Colors.amber.shade800,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.vpn_key_rounded, size: 13, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'شراء وتفعيل الآن',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

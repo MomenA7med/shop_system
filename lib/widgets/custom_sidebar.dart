@@ -5,7 +5,9 @@ import '../core/constants/app_colors.dart';
 import '../core/constants/app_strings.dart';
 import '../core/services/app_info_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/license_provider.dart';
 import '../providers/settings_provider.dart';
+import '../views/license/activation_dialog.dart';
 
 class CustomSidebar extends StatelessWidget {
   final int selectedIndex;
@@ -230,6 +232,89 @@ class CustomSidebar extends StatelessWidget {
                 );
               },
             ),
+          ),
+
+          // License / Activation Section
+          Consumer<LicenseProvider>(
+            builder: (context, license, _) {
+              final isActivated = license.isActivated;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      ActivationDialog.show(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: isActivated
+                            ? LinearGradient(
+                                colors: [
+                                  Colors.teal.shade800.withValues(alpha: 0.15),
+                                  Colors.green.shade800.withValues(alpha: 0.1),
+                                ],
+                              )
+                            : LinearGradient(
+                                colors: [
+                                  Colors.amber.shade700.withValues(alpha: 0.2),
+                                  Colors.orange.shade800.withValues(alpha: 0.15),
+                                ],
+                              ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isActivated
+                              ? Colors.green.withValues(alpha: 0.4)
+                              : Colors.amber.shade700.withValues(alpha: 0.6),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isActivated ? Icons.verified_rounded : Icons.shopping_bag_outlined,
+                            size: 20,
+                            color: isActivated ? Colors.green : Colors.amber.shade800,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isActivated ? 'النسخة مفعلة' : 'شراء وتفعيل النظام',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isActivated ? Colors.green : Colors.amber.shade900,
+                                  ),
+                                ),
+                                if (!isActivated)
+                                  Text(
+                                    'متبقي ${license.remainingInvoices} فواتير / ${license.daysRemaining} يوم',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 11,
+                            color: isActivated ? Colors.green : Colors.amber.shade800,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
 
           // Logout Action Button
