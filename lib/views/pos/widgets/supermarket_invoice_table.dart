@@ -270,7 +270,7 @@ class _SupermarketInvoiceTableState extends State<SupermarketInvoiceTable> {
                       final hasDesc = v.color.isNotEmpty &&
                           v.color != '-' &&
                           v.color != 'افتراضي';
-                      final label = hasDesc ? '${v.size} ($v.color)' : v.size;
+                      final label = hasDesc ? '${v.size} (${v.color})' : v.size;
                       return '$label: ${v.sellingPrice.toStringAsFixed(0)}ج (مخزون: ${NumberParser.formatQuantity(v.stockQuantity)})';
                     }).join(' | '),
                     style: TextStyle(fontSize: 11, color: colors.textSecondary),
