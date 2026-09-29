@@ -266,31 +266,53 @@ class _SupermarketInvoiceTableState extends State<SupermarketInvoiceTable> {
                   leading: const Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 20),
                   title: Text(prod.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   subtitle: Text(
-                    prod.variants.map((v) => '${v.size}: ${v.sellingPrice}ج (مخزون: ${NumberParser.formatQuantity(v.stockQuantity)})').join(' | '),
+                    prod.variants.map((v) {
+                      final hasDesc = v.color.isNotEmpty &&
+                          v.color != '-' &&
+                          v.color != 'افتراضي';
+                      final label = hasDesc ? '${v.size} ($v.color)' : v.size;
+                      return '$label: ${v.sellingPrice.toStringAsFixed(0)}ج (مخزون: ${NumberParser.formatQuantity(v.stockQuantity)})';
+                    }).join(' | '),
                     style: TextStyle(fontSize: 11, color: colors.textSecondary),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  trailing: Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: prod.variants.map((v) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: const Size(50, 28),
+                      final hasDesc = v.color.isNotEmpty &&
+                          v.color != '-' &&
+                          v.color != 'افتراضي';
+                      final btnLabel = hasDesc
+                          ? '+ ${v.size} (${v.color}) - ${v.sellingPrice.toStringAsFixed(0)}ج'
+                          : '+ ${v.size} (${v.sellingPrice.toStringAsFixed(0)}ج)';
+                      return ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          onPressed: () {
-                            pos.addVariantToCart(prod, v);
-                            _searchController.clear();
-                            setState(() {
-                              _showDropdown = false;
-                              _matchingProducts = [];
-                            });
-                            _searchFocus.requestFocus();
-                          },
-                          child: Text('+ ${v.size}', style: const TextStyle(fontSize: 11)),
+                          minimumSize: const Size(44, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () {
+                          pos.addVariantToCart(prod, v);
+                          _searchController.clear();
+                          setState(() {
+                            _showDropdown = false;
+                            _matchingProducts = [];
+                          });
+                          _searchFocus.requestFocus();
+                        },
+                        child: Text(
+                          btnLabel,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -394,7 +416,9 @@ class _SupermarketInvoiceTableState extends State<SupermarketInvoiceTable> {
                                       border: Border.all(color: colors.border),
                                     ),
                                     child: Text(
-                                      item.size.isNotEmpty ? item.size : 'قطعة',
+                                      (item.color.isNotEmpty && item.color != '-' && item.color != 'افتراضي')
+                                          ? '${item.size} (${item.color})'
+                                          : (item.size.isNotEmpty ? item.size : 'قطعة'),
                                       style: TextStyle(fontSize: 11, color: colors.textSecondary),
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.center,
