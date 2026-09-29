@@ -55,7 +55,12 @@ class ImportService {
     } else if (path.endsWith('.xlsx') || path.endsWith('.xls')) {
       return _parseExcel(file);
     } else {
-      throw Exception('صيغة الملف غير مدعومة! يرجى اختيار ملف Excel (.xlsx) أو ملف (.csv)');
+      // Fallback attempt: try excel first, if fails try csv
+      try {
+        return await _parseExcel(file);
+      } catch (_) {
+        return await _parseCsv(file);
+      }
     }
   }
 
@@ -65,7 +70,11 @@ class ImportService {
     try {
       content = utf8.decode(bytes);
     } catch (_) {
-      content = latin1.decode(bytes);
+      try {
+        content = latin1.decode(bytes);
+      } catch (_) {
+        content = String.fromCharCodes(bytes);
+      }
     }
 
     // Strip BOM if present
@@ -73,7 +82,11 @@ class ImportService {
       content = content.substring(1);
     }
 
-    final rows = const CsvToListConverter(shouldParseNumbers: false).convert(content);
+    final rows = const CsvToListConverter(
+      shouldParseNumbers: false,
+      allowInvalid: true,
+    ).convert(content);
+
     if (rows.isEmpty) return [];
 
     return _processRows(rows);
@@ -81,27 +94,75 @@ class ImportService {
 
   static Future<List<ImportedItemPreview>> _parseExcel(File file) async {
     final bytes = await file.readAsBytes();
-    final excel = Excel.decodeBytes(bytes);
+    Excel excel;
+    try {
+      excel = Excel.decodeBytes(bytes);
+    } catch (e) {
+      // If Excel decoding fails (e.g., file was actually a CSV or HTML renamed to .xls)
+      return _parseCsv(file);
+    }
 
     if (excel.tables.isEmpty) return [];
 
-    final sheetName = excel.tables.keys.first;
-    final table = excel.tables[sheetName];
-    if (table == null || table.rows.isEmpty) return [];
+    // Search across all sheets to find the one with the best data
+    List<ImportedItemPreview> bestItems = [];
 
-    final rawRows = <List<dynamic>>[];
-    for (final row in table.rows) {
-      final cells = row.map((c) => c?.value?.toString() ?? '').toList();
-      rawRows.add(cells);
+    for (final sheetName in excel.tables.keys) {
+      final table = excel.tables[sheetName];
+      if (table == null || table.rows.isEmpty) continue;
+
+      final rawRows = <List<dynamic>>[];
+      for (final row in table.rows) {
+        final cells = row.map((c) => _extractCellValue(c)).toList();
+        rawRows.add(cells);
+      }
+
+      final items = _processRows(rawRows);
+      if (items.length > bestItems.length) {
+        bestItems = items;
+      }
     }
 
-    return _processRows(rawRows);
+    return bestItems;
+  }
+
+  static String _extractCellValue(dynamic cell) {
+    if (cell == null) return '';
+    final val = cell.value;
+    if (val == null) return '';
+
+    if (val is TextCellValue) {
+      return val.value.toString().trim();
+    }
+    if (val is IntCellValue) {
+      return val.value.toString();
+    }
+    if (val is DoubleCellValue) {
+      final d = val.value;
+      if (d % 1 == 0) {
+        return d.toInt().toString();
+      }
+      return d.toString();
+    }
+    if (val is DateCellValue) {
+      return '${val.year}-${val.month.toString().padLeft(2, '0')}-${val.day.toString().padLeft(2, '0')}';
+    }
+    if (val is DateTimeCellValue) {
+      return '${val.year}-${val.month.toString().padLeft(2, '0')}-${val.day.toString().padLeft(2, '0')}';
+    }
+    if (val is BoolCellValue) {
+      return val.value.toString();
+    }
+
+    // Generic fallback
+    final str = val.toString().trim();
+    return str;
   }
 
   static List<ImportedItemPreview> _processRows(List<List<dynamic>> rows) {
     if (rows.isEmpty) return [];
 
-    // 1. Find Header Row
+    // 1. Find Header Row by scanning all rows (up to row 35)
     int headerIndex = -1;
     int barcodeCol = -1;
     int nameCol = -1;
@@ -112,53 +173,112 @@ class ImportService {
     int catCol = -1;
     int expiryCol = -1;
 
-    for (int i = 0; i < rows.length && i < 5; i++) {
+    for (int i = 0; i < rows.length && i < 35; i++) {
       final row = rows[i].map((c) => c.toString().trim()).toList();
+      if (row.isEmpty) continue;
+
+      int curBarcode = -1;
+      int curName = -1;
+      int curQty = -1;
+      int curUnit = -1;
+      int curCost = -1;
+      int curPrice = -1;
+      int curCat = -1;
+      int curExpiry = -1;
+      int matchesCount = 0;
 
       for (int c = 0; c < row.length; c++) {
-        final cell = row[c].toLowerCase();
+        final cell = row[c];
+        if (cell.isEmpty) continue;
 
         // Barcode / رقم المادة
-        if (_matches(cell, ['رقم المادة', 'رقم الماده', 'الباركود', 'باركود', 'كود الصنف', 'كود', 'barcode', 'sku', 'code', 'item code'])) {
-          barcodeCol = c;
+        if (_matches(cell, [
+          'رقم المادة', 'رقم الماده', 'الباركود', 'باركود', 'كود الصنف',
+          'كود المادة', 'كود الماده', 'رقم الصنف', 'كود', 'كود المنتج',
+          'barcode', 'sku', 'code', 'item code', 'item_code', 'itemno', 'item_no'
+        ])) {
+          curBarcode = c;
+          matchesCount++;
         }
         // Name / اسم المادة
-        else if (_matches(cell, ['اسم المادة', 'اسم الماده', 'اسم الصنف', 'اسم المنتج', 'الصنف', 'المنتج', 'name', 'product', 'item name', 'item'])) {
-          nameCol = c;
+        else if (_matches(cell, [
+          'اسم المادة', 'اسم الماده', 'اسم الصنف', 'اسم المنتج', 'الصنف',
+          'المنتج', 'المادة', 'الماده', 'البيان', 'الوصف',
+          'name', 'product', 'item name', 'item_name', 'item', 'description'
+        ])) {
+          curName = c;
+          matchesCount++;
         }
         // Quantity / الكمية
-        else if (_matches(cell, ['الكمية', 'الكميه', 'الرصيد', 'المخزون', 'العدد', 'qty', 'quantity', 'stock', 'count'])) {
-          qtyCol = c;
+        else if (_matches(cell, [
+          'الكمية', 'الكميه', 'الرصيد', 'المخزون', 'العدد', 'الكمية الحالية',
+          'رصيد المخزن', 'qty', 'quantity', 'stock', 'count', 'balance'
+        ])) {
+          curQty = c;
+          matchesCount++;
         }
         // Unit / الوحدة
-        else if (_matches(cell, ['الوحدة', 'الوحده', 'العبوة', 'المقاس', 'الحجم', 'unit', 'package', 'size'])) {
-          unitCol = c;
+        else if (_matches(cell, [
+          'الوحدة', 'الوحده', 'العبوة', 'العبوه', 'المقاس', 'الحجم',
+          'نوع الوحدة', 'unit', 'package', 'pkg', 'size', 'uom'
+        ])) {
+          curUnit = c;
+          matchesCount++;
         }
-        // Cost Price / سعر الجملة الإفرادي
-        else if (_matches(cell, ['سعر الجملة الإفرادي', 'سعر الجملة الافرادي', 'سعر الجملة', 'سعر الشراء', 'سعر التكلفة', 'التكلفة', 'cost', 'cost_price', 'wholesale'])) {
-          costCol = c;
+        // Cost Price / سعر الجملة الإفرادي / سعر التكلفة
+        else if (_matches(cell, [
+          'سعر الجملة الإفرادي', 'سعر الجملة الافرادي', 'سعر الجملة', 'سعر الشراء',
+          'سعر التكلفة', 'التكلفة', 'التكلفه', 'سعر الشراء الإفرادي',
+          'سعر الشراء الافرادي', 'سعر التكلفة الإفرادي', 'سعر التكلفه الافرادي',
+          'cost', 'cost_price', 'wholesale', 'buy_price', 'purchase_price'
+        ])) {
+          curCost = c;
+          matchesCount++;
         }
         // Selling Price / سعر البيع الإفرادي
-        else if (_matches(cell, ['سعر البيع الإفرادي', 'سعر البيع الافرادي', 'سعر البيع', 'سعر المستهلك', 'البيع', 'price', 'selling_price', 'retail'])) {
-          priceCol = c;
+        else if (_matches(cell, [
+          'سعر البيع الإفرادي', 'سعر البيع الافرادي', 'سعر البيع', 'سعر المستهلك',
+          'البيع', 'سعر التجزئة', 'سعر القطاعي', 'سعر البيع للقطاعي',
+          'price', 'selling_price', 'retail', 'sale_price'
+        ])) {
+          curPrice = c;
+          matchesCount++;
         }
         // Category / التصنيف
-        else if (_matches(cell, ['التصنيف', 'القسم', 'المجموعة', 'المجموعه', 'category', 'group', 'dept'])) {
-          catCol = c;
+        else if (_matches(cell, [
+          'التصنيف', 'القسم', 'المجموعة', 'المجموعه', 'الفئة', 'الفئه', 'النوع',
+          'category', 'group', 'dept', 'section', 'type'
+        ])) {
+          curCat = c;
+          matchesCount++;
         }
         // Expiry Date / تاريخ الإنتهاء
-        else if (_matches(cell, ['تاريخ الإنتهاء', 'تاريخ الانتهاء', 'الصلاحية', 'تاريخ الصلاحية', 'expiry', 'exp_date'])) {
-          expiryCol = c;
+        else if (_matches(cell, [
+          'تاريخ الإنتهاء', 'تاريخ الانتهاء', 'تاريخ الصلاحية', 'تاريخ الصلاحيه',
+          'الصلاحية', 'الصلاحيه', 'تاريخ النفاذ',
+          'expiry', 'exp_date', 'expiration', 'expiry_date'
+        ])) {
+          curExpiry = c;
+          matchesCount++;
         }
       }
 
-      if (nameCol != -1 || barcodeCol != -1) {
+      // If at least 2 columns match, or if product name or barcode header is clearly identified
+      if (matchesCount >= 2 || (curName != -1 && (curPrice != -1 || curCost != -1 || curQty != -1 || curBarcode != -1))) {
         headerIndex = i;
+        barcodeCol = curBarcode;
+        nameCol = curName;
+        qtyCol = curQty;
+        unitCol = curUnit;
+        costCol = curCost;
+        priceCol = curPrice;
+        catCol = curCat;
+        expiryCol = curExpiry;
         break;
       }
     }
 
-    // Default column fallback if headers not named clearly
+    // Default column fallback if headers not found at all
     if (headerIndex == -1) {
       headerIndex = 0;
       barcodeCol = 0;
@@ -168,6 +288,7 @@ class ImportService {
       costCol = 4;
       priceCol = 5;
       catCol = 6;
+      expiryCol = 7;
     }
 
     final items = <ImportedItemPreview>[];
@@ -183,6 +304,12 @@ class ImportService {
         return '';
       }
 
+      // Check if this row is a summary / total / footer row (e.g. "مجموع سعر الجملة: 0")
+      final rowJoined = row.map((c) => c?.toString() ?? '').join(' ');
+      if (_isSummaryRow(rowJoined)) {
+        continue;
+      }
+
       final rawName = getVal(nameCol);
       final rawBarcode = getVal(barcodeCol);
       final rawQty = getVal(qtyCol);
@@ -195,8 +322,13 @@ class ImportService {
       // Skip completely empty lines
       if (rawName.isEmpty && rawBarcode.isEmpty) continue;
 
-      final barcode = rawBarcode.isNotEmpty ? rawBarcode : 'GEN_${DateTime.now().millisecondsSinceEpoch}_$r';
-      final name = rawName.isNotEmpty ? rawName : 'صنف غير مسمى ($barcode)';
+      // Clean barcode (remove decimal .0 if present from Excel numbers)
+      String cleanBarcode = _cleanBarcode(rawBarcode);
+      if (cleanBarcode.isEmpty) {
+        cleanBarcode = 'GEN_${DateTime.now().millisecondsSinceEpoch}_$r';
+      }
+
+      final name = rawName.isNotEmpty ? rawName : 'صنف غير مسمى ($cleanBarcode)';
       final category = rawCat.isNotEmpty ? rawCat : 'عام / غير مصنف';
       final unit = rawUnit.isNotEmpty ? rawUnit : 'قطعة';
 
@@ -205,7 +337,7 @@ class ImportService {
       final price = _parseDouble(rawPrice, cost > 0 ? cost * 1.25 : 0.0);
 
       items.add(ImportedItemPreview(
-        barcode: barcode,
+        barcode: cleanBarcode,
         productName: name,
         categoryName: category,
         unit: unit,
@@ -219,15 +351,49 @@ class ImportService {
     return items;
   }
 
+  static bool _isSummaryRow(String text) {
+    final clean = _normalize(text);
+    return clean.startsWith('مجموع') ||
+        clean.startsWith('الاجمالي') ||
+        clean.startsWith('المجموع') ||
+        clean.startsWith('total') ||
+        clean.startsWith('sum') ||
+        clean.startsWith('عددالمواد') ||
+        clean.startsWith('عددالاصناف');
+  }
+
+  static String _cleanBarcode(String val) {
+    var s = val.trim();
+    if (s.endsWith('.0')) {
+      s = s.substring(0, s.length - 2);
+    }
+    return s.replaceAll(' ', '');
+  }
+
   static bool _matches(String cellText, List<String> aliases) {
-    final clean = cellText.trim().toLowerCase().replaceAll(' ', '').replaceAll('_', '');
+    final clean = _normalize(cellText);
     for (final alias in aliases) {
-      final cleanAlias = alias.trim().toLowerCase().replaceAll(' ', '').replaceAll('_', '');
-      if (clean == cleanAlias || clean.contains(cleanAlias)) {
+      final cleanAlias = _normalize(alias);
+      if (clean == cleanAlias || clean.contains(cleanAlias) || cleanAlias.contains(clean)) {
         return true;
       }
     }
     return false;
+  }
+
+  static String _normalize(String input) {
+    return input
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '') // Arabic Tashkeel / diacritics
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ة', 'ه')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ؤ', 'و')
+        .replaceAll('ئ', 'ي')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9\u0621-\u064A]'), ''); // remove spaces, punctuation, underscores, dashes
   }
 
   static int _parseInt(String val, int fallback) {
