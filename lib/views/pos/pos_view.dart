@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/pos_provider.dart';
+import 'widgets/barcode_search_bar.dart';
+import 'widgets/category_filter_bar.dart';
 import 'widgets/cart_panel.dart';
-import 'widgets/supermarket_invoice_table.dart';
+import 'widgets/product_card_grid.dart';
 
 class POSView extends StatefulWidget {
   const POSView({super.key});
@@ -29,12 +31,20 @@ class _POSViewState extends State<POSView> {
       backgroundColor: colors.background,
       body: Row(
         children: const [
-          // 1. Center & Main Supermarket Invoice & Scanner Area
+          // 1. Main & Wide Right Area: Scanner Search Bar, Category/Quick Filters, and Full-Screen Cards Grid
           Expanded(
-            child: SupermarketInvoiceTable(),
+            child: Column(
+              children: [
+                BarcodeSearchBar(),
+                CategoryFilterBar(),
+                Expanded(
+                  child: ProductCardGrid(),
+                ),
+              ],
+            ),
           ),
 
-          // 2. Side Panel: Checkout, Keypad & Fast Payment
+          // 2. Side Panel (Left): Classic Invoice / Cart with Item List & Fast Payment Cockpit
           CartPanel(),
         ],
       ),

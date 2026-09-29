@@ -19,12 +19,22 @@ class POSProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _statusMessage;
 
-  List<ProductModel> get products => _products;
+  bool _isQuickFilterOnly = false;
+
+  List<ProductModel> get products {
+    if (_isQuickFilterOnly) {
+      return _products.where((p) => p.isQuickItem).toList();
+    }
+    return _products;
+  }
+
+  List<ProductModel> get allLoadedProducts => _products;
   List<ProductModel> get quickProducts =>
       _products.where((p) => p.isQuickItem).toList();
   List<CategoryModel> get categories => _categories;
   List<OrderItemModel> get cartItems => _cartItems;
   int? get selectedCategoryId => _selectedCategoryId;
+  bool get isQuickFilterOnly => _isQuickFilterOnly;
   String get searchQuery => _searchQuery;
   double get discount => _discount;
   double get amountPaid => _amountPaid;
@@ -55,7 +65,14 @@ class POSProvider with ChangeNotifier {
     }
   }
 
+  void selectQuickFilter() {
+    _isQuickFilterOnly = true;
+    _selectedCategoryId = null;
+    loadPOSData();
+  }
+
   void selectCategory(int? categoryId) {
+    _isQuickFilterOnly = false;
     _selectedCategoryId = categoryId;
     loadPOSData();
   }

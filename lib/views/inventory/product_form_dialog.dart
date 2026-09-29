@@ -463,26 +463,36 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       const SizedBox(width: 16),
                       // Quick item toggle chip
                       InkWell(
-                        onTap: () => setState(() => _isQuickItem = !_isQuickItem),
+                        onTap: () =>
+                            setState(() => _isQuickItem = !_isQuickItem),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: _isQuickItem
                                 ? AppColors.primary.withValues(alpha: 0.15)
                                 : colors.cardSurface,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: _isQuickItem ? AppColors.primary : colors.border,
+                              color: _isQuickItem
+                                  ? AppColors.primary
+                                  : colors.border,
                             ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _isQuickItem ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                _isQuickItem
+                                    ? Icons.flash_on_rounded
+                                    : Icons.flash_off_rounded,
                                 size: 16,
-                                color: _isQuickItem ? AppColors.primary : colors.textMuted,
+                                color: _isQuickItem
+                                    ? AppColors.primary
+                                    : colors.textMuted,
                               ),
                               const SizedBox(width: 6),
                               Text(
@@ -490,14 +500,18 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: _isQuickItem ? AppColors.primary : colors.textSecondary,
+                                  color: _isQuickItem
+                                      ? AppColors.primary
+                                      : colors.textSecondary,
                                 ),
                               ),
                               const SizedBox(width: 4),
                               Checkbox(
                                 value: _isQuickItem,
-                                onChanged: (val) => setState(() => _isQuickItem = val ?? false),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                onChanged: (val) =>
+                                    setState(() => _isQuickItem = val ?? false),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                               ),
                             ],
                           ),
