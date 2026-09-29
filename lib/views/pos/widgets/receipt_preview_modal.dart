@@ -166,7 +166,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                             const SizedBox(height: 2),
                             Text(
                               settings.slogan,
-                              style: const TextStyle(color: Colors.black54, fontSize: 10),
+                              style: const TextStyle(color: Colors.black, fontSize: 10),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -174,14 +174,14 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                             const SizedBox(height: 2),
                             Text(
                               'هاتف: ${settings.phone}',
-                              style: const TextStyle(color: Colors.black87, fontSize: 10),
+                              style: const TextStyle(color: Colors.black, fontSize: 10),
                             ),
                           ],
                           if (settings.address.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               settings.address,
-                              style: const TextStyle(color: Colors.black87, fontSize: 10),
+                              style: const TextStyle(color: Colors.black, fontSize: 10),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -214,7 +214,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                               Expanded(flex: 2, child: Text('الإجمالي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.black), textAlign: TextAlign.left)),
                             ],
                           ),
-                          const Divider(height: 10, color: Colors.black26),
+                          const Divider(height: 10, color: Colors.black),
 
                           // Line Items (Only items with remainingQuantity > 0)
                           ...(){
@@ -226,7 +226,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                   child: Center(
                                     child: Text(
                                       'لا توجد أصناف في الفاتورة (مسترجعة بالكامل)',
-                                      style: TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ),
@@ -250,7 +250,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                         ),
                                         Text(
                                           '(${item.size} - ${item.color})',
-                                          style: const TextStyle(color: Colors.black54, fontSize: 9),
+                                          style: const TextStyle(color: Colors.black, fontSize: 9),
                                         ),
                                       ],
                                     ),
@@ -271,7 +271,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                     flex: 2,
                                     child: Text(
                                       item.unitPrice.toStringAsFixed(1),
-                                      style: const TextStyle(color: Colors.black87, fontSize: 10),
+                                      style: const TextStyle(color: Colors.black, fontSize: 10),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
@@ -316,7 +316,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                   'خدمة التوصيل (+):',
                                   '+ ${CurrencyFormatter.format(order.deliveryFee, symbol: settings.currencySymbol)}',
                                   isBold: true,
-                                  textColor: const Color(0xFF0D9488),
+                                  textColor: Colors.black,
                                   fontSize: 11,
                                 ),
                                 const SizedBox(height: 3),
@@ -326,7 +326,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                   'الخصم (-):',
                                   '- ${CurrencyFormatter.format(activeDiscount, symbol: settings.currencySymbol)}',
                                   isBold: true,
-                                  textColor: const Color(0xFFDC2626),
+                                  textColor: Colors.black,
                                   fontSize: 11,
                                 ),
                                 const SizedBox(height: 3),
@@ -354,7 +354,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.view_column_rounded, size: 28, color: Colors.black87),
+                                    const Icon(Icons.view_column_rounded, size: 28, color: Colors.black),
                                     const SizedBox(width: 4),
                                     Text(
                                       order.invoiceNumber,
@@ -362,7 +362,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                                         fontFamily: 'monospace',
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
+                                        color: Colors.black,
                                         letterSpacing: 2.0,
                                       ),
                                     ),
@@ -377,7 +377,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                             const SizedBox(height: 6),
                             Text(
                               settings.receiptFooter,
-                              style: const TextStyle(color: Colors.black54, fontSize: 9),
+                              style: const TextStyle(color: Colors.black, fontSize: 9),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -439,7 +439,7 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
         Text(
           label,
           style: TextStyle(
-            color: isBold ? Colors.black : Colors.black87,
+            color: Colors.black,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             fontSize: fontSize,
           ),
@@ -476,7 +476,7 @@ class _DashedLine extends StatelessWidget {
               width: dashWidth,
               height: dashHeight,
               child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.black26),
+                decoration: BoxDecoration(color: Colors.black),
               ),
             );
           }),

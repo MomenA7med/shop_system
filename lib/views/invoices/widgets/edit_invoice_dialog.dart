@@ -26,6 +26,8 @@ class EditInvoiceDialog extends StatefulWidget {
 class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
   late List<OrderItemModel> _editableItems;
   late TextEditingController _paidCtrl;
+  late TextEditingController _discountCtrl;
+  late TextEditingController _deliveryCtrl;
   bool _isSaving = false;
 
   @override
@@ -49,6 +51,25 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
       );
     }).toList();
 
+    final initialDiscount = widget.order.discountAmount;
+    final initialDelivery = widget.order.deliveryFee;
+
+    _discountCtrl = TextEditingController(
+      text: initialDiscount > 0
+          ? (initialDiscount % 1 == 0
+              ? initialDiscount.toInt().toString()
+              : initialDiscount.toStringAsFixed(2))
+          : '',
+    );
+
+    _deliveryCtrl = TextEditingController(
+      text: initialDelivery > 0
+          ? (initialDelivery % 1 == 0
+              ? initialDelivery.toInt().toString()
+              : initialDelivery.toStringAsFixed(2))
+          : '',
+    );
+
     _paidCtrl = TextEditingController(
       text: widget.order.amountPaid % 1 == 0
           ? widget.order.amountPaid.toInt().toString()
@@ -59,22 +80,41 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
   @override
   void dispose() {
     _paidCtrl.dispose();
+    _discountCtrl.dispose();
+    _deliveryCtrl.dispose();
     super.dispose();
   }
 
-  double get _currentTotal => _editableItems.fold(0.0, (sum, item) => sum + item.totalPrice);
-  double get _currentPaid => NumberParser.tryParseDouble(_paidCtrl.text.trim(), _currentTotal);
-  double get _currentChange => _currentPaid > _currentTotal ? _currentPaid - _currentTotal : 0.0;
+  double get _itemsSubtotal =>
+      _editableItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+  double get _currentDiscount =>
+      NumberParser.tryParseDouble(_discountCtrl.text.trim(), 0.0);
+  double get _currentDelivery =>
+      NumberParser.tryParseDouble(_deliveryCtrl.text.trim(), 0.0);
+
+  double get _currentTotal {
+    final net = _itemsSubtotal - _currentDiscount + _currentDelivery;
+    return net > 0 ? net : 0.0;
+  }
+
+  double get _currentPaid =>
+      NumberParser.tryParseDouble(_paidCtrl.text.trim(), _currentTotal);
+  double get _currentChange =>
+      _currentPaid > _currentTotal ? _currentPaid - _currentTotal : 0.0;
+
+  void _syncPaidIfExact(double oldTotal) {
+    if (_currentPaid == oldTotal || _paidCtrl.text.trim().isEmpty) {
+      _paidCtrl.text = _currentTotal % 1 == 0
+          ? _currentTotal.toInt().toString()
+          : _currentTotal.toStringAsFixed(2);
+    }
+  }
 
   void _incrementQuantity(int index) {
+    final oldTotal = _currentTotal;
     setState(() {
       _editableItems[index].quantity += 1;
-      // Auto adjust paid if it was exact match before
-      if (_currentPaid == widget.order.totalAmount) {
-        _paidCtrl.text = _currentTotal % 1 == 0
-            ? _currentTotal.toInt().toString()
-            : _currentTotal.toStringAsFixed(2);
-      }
+      _syncPaidIfExact(oldTotal);
     });
   }
 
@@ -85,7 +125,8 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
       if (item.returnedQuantity > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('لا يمكن تقليل الكمية لأقل من الكمية المرتجعة بالفعل (${item.returnedQuantity})'),
+            content: Text(
+                'لا يمكن تقليل الكمية لأقل من الكمية المرتجعة بالفعل (${item.returnedQuantity})'),
             backgroundColor: AppColors.warning,
           ),
         );
@@ -93,13 +134,10 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
       return;
     }
 
+    final oldTotal = _currentTotal;
     setState(() {
       _editableItems[index].quantity -= 1;
-      if (_currentPaid == widget.order.totalAmount) {
-        _paidCtrl.text = _currentTotal % 1 == 0
-            ? _currentTotal.toInt().toString()
-            : _currentTotal.toStringAsFixed(2);
-      }
+      _syncPaidIfExact(oldTotal);
     });
   }
 
@@ -118,20 +156,18 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
     if (_editableItems.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('يجب أن تحتوي الفاتورة على عنصر واحد على الأقل، أو قم بحذف الفاتورة بالكامل'),
+          content: Text(
+              'يجب أن تحتوي الفاتورة على عنصر واحد على الأقل، أو قم بحذف الفاتورة بالكامل'),
           backgroundColor: AppColors.warning,
         ),
       );
       return;
     }
 
+    final oldTotal = _currentTotal;
     setState(() {
       _editableItems.removeAt(index);
-      if (_currentPaid == widget.order.totalAmount) {
-        _paidCtrl.text = _currentTotal % 1 == 0
-            ? _currentTotal.toInt().toString()
-            : _currentTotal.toStringAsFixed(2);
-      }
+      _syncPaidIfExact(oldTotal);
     });
   }
 
@@ -160,6 +196,7 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
       totalAmount: _currentTotal,
       amountPaid: _currentPaid,
       changeDue: _currentChange,
+      deliveryFee: _currentDelivery,
     );
 
     if (success) {
@@ -209,31 +246,41 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.edit_note_rounded, color: colors.primary, size: 24),
                 ),
-                child: Icon(Icons.edit_note_rounded, color: colors.primary, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'تعديل الفاتورة #${widget.order.invoiceNumber}',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: colors.textPrimary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'تعديل الفاتورة #${widget.order.invoiceNumber}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'تعديل الكميات والعناصر، الدليفري، الخصم، والمبالغ المسددة',
+                        style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  Text(
-                    'تعديل الكميات والعناصر والمبالغ المسددة',
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
           IconButton(
             icon: Icon(Icons.close, color: colors.textMuted),
@@ -242,7 +289,7 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
         ],
       ),
       content: SizedBox(
-        width: 680,
+        width: 700,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +299,7 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
 
             // Items List
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280),
+              constraints: const BoxConstraints(maxHeight: 240),
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: _editableItems.length,
@@ -296,7 +343,8 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                         Expanded(
                           flex: 2,
                           child: Text(
-                            CurrencyFormatter.format(item.unitPrice, symbol: settings.currencySymbol),
+                            CurrencyFormatter.format(item.unitPrice,
+                                symbol: settings.currencySymbol),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
@@ -309,14 +357,15 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                         Row(
                           children: [
                             IconButton(
-                              icon: Icon(Icons.remove_circle_outline, size: 18, color: colors.textPrimary),
+                              icon: Icon(Icons.remove_circle_outline,
+                                  size: 18, color: colors.textPrimary),
                               onPressed: () => _decrementQuantity(index),
                             ),
                             Container(
                               constraints: const BoxConstraints(minWidth: 28),
                               alignment: Alignment.center,
                               child: Text(
-                                '${item.quantity}',
+                                NumberParser.formatQuantity(item.quantity),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -325,7 +374,8 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                               ),
                             ),
                             IconButton(
-                              icon: Icon(Icons.add_circle_outline, size: 18, color: colors.primary),
+                              icon: Icon(Icons.add_circle_outline,
+                                  size: 18, color: colors.primary),
                               onPressed: () => _incrementQuantity(index),
                             ),
                           ],
@@ -337,12 +387,15 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                         SizedBox(
                           width: 85,
                           child: Text(
-                            CurrencyFormatter.format(item.totalPrice, symbol: settings.currencySymbol),
+                            CurrencyFormatter.format(item.totalPrice,
+                                symbol: settings.currencySymbol),
                             textAlign: TextAlign.end,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                              color: colors.isDark
+                                  ? colors.primaryLight
+                                  : colors.primaryDark,
                             ),
                           ),
                         ),
@@ -351,7 +404,8 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
 
                         // Delete button
                         IconButton(
-                          icon: Icon(Icons.delete_outline, size: 18, color: colors.error),
+                          icon: Icon(Icons.delete_outline,
+                              size: 18, color: colors.error),
                           onPressed: () => _removeItem(index),
                           tooltip: 'حذف من الفاتورة',
                         ),
@@ -362,7 +416,180 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // Delivery & Discount Inputs Row
+            Row(
+              children: [
+                // Delivery input
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.cardSurface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Icons.delivery_dining_rounded,
+                            size: 18,
+                            color: AppColors.accent,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'الدليفري:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 34,
+                            child: TextField(
+                              controller: _deliveryCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: colors.textPrimary,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: '0',
+                                hintStyle: TextStyle(
+                                    color: colors.textMuted, fontSize: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 0),
+                                isDense: true,
+                                suffixText: settings.currencySymbol,
+                                suffixIcon: _deliveryCtrl.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 14),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          final oldTotal = _currentTotal;
+                                          setState(() {
+                                            _deliveryCtrl.clear();
+                                            _syncPaidIfExact(oldTotal);
+                                          });
+                                        },
+                                      )
+                                    : null,
+                              ),
+                              onChanged: (_) {
+                                final oldTotal = _currentTotal;
+                                setState(() {
+                                  _syncPaidIfExact(oldTotal);
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                // Discount input
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.cardSurface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Icons.discount_outlined,
+                            size: 18,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'الخصم:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SizedBox(
+                            height: 34,
+                            child: TextField(
+                              controller: _discountCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(
+                                  decimal: true),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: colors.textPrimary,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: '0',
+                                hintStyle: TextStyle(
+                                    color: colors.textMuted, fontSize: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 0),
+                                isDense: true,
+                                suffixText: settings.currencySymbol,
+                                suffixIcon: _discountCtrl.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 14),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          final oldTotal = _currentTotal;
+                                          setState(() {
+                                            _discountCtrl.clear();
+                                            _syncPaidIfExact(oldTotal);
+                                          });
+                                        },
+                                      )
+                                    : null,
+                              ),
+                              onChanged: (_) {
+                                final oldTotal = _currentTotal;
+                                setState(() {
+                                  _syncPaidIfExact(oldTotal);
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
 
             // Financial Summary & Paid Amount inputs
             Container(
@@ -374,19 +601,104 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
               ),
               child: Column(
                 children: [
+                  // Breakdown if delivery or discount applied
+                  if (_currentDiscount > 0 || _currentDelivery > 0) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'إجمالي الأصناف (${NumberParser.formatQuantity(_editableItems.fold(0.0, (s, i) => s + i.quantity))} وحدة):',
+                          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                        ),
+                        Text(
+                          CurrencyFormatter.format(_itemsSubtotal,
+                              symbol: settings.currencySymbol),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_currentDelivery > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.delivery_dining_rounded,
+                                  size: 14, color: AppColors.accent),
+                              const SizedBox(width: 4),
+                              Text('خدمة التوصيل (دليفري):',
+                                  style: TextStyle(
+                                      fontSize: 11, color: colors.textSecondary)),
+                            ],
+                          ),
+                          Text(
+                            '+ ${CurrencyFormatter.format(_currentDelivery, symbol: settings.currencySymbol)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: AppColors.accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_currentDiscount > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.discount_outlined,
+                                  size: 14, color: AppColors.warning),
+                              const SizedBox(width: 4),
+                              Text('الخصم:',
+                                  style: TextStyle(
+                                      fontSize: 11, color: colors.textSecondary)),
+                            ],
+                          ),
+                          Text(
+                            '- ${CurrencyFormatter.format(_currentDiscount, symbol: settings.currencySymbol)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6),
+                      child: Divider(height: 1),
+                    ),
+                  ],
+
+                  // Grand total row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'إجمالي الفاتورة الجديد (${NumberParser.formatQuantity(_editableItems.fold(0.0, (s, i) => s + i.quantity))} وحدة):',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colors.textPrimary),
+                        'إجمالي الفاتورة الجديد:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: colors.textPrimary),
                       ),
                       Text(
-                        CurrencyFormatter.format(_currentTotal, symbol: settings.currencySymbol),
+                        CurrencyFormatter.format(_currentTotal,
+                            symbol: settings.currencySymbol),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                          color: colors.isDark
+                              ? colors.primaryLight
+                              : colors.primaryDark,
                         ),
                       ),
                     ],
@@ -399,7 +711,10 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                           children: [
                             Text(
                               'المبلغ المستلم:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.textSecondary),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.textSecondary),
                             ),
                             const SizedBox(width: 10),
                             SizedBox(
@@ -407,10 +722,16 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                               height: 38,
                               child: TextField(
                                 controller: _paidCtrl,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colors.textPrimary),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: colors.textPrimary),
                                 decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 0),
                                   isDense: true,
                                   suffixText: settings.currencySymbol,
                                 ),
@@ -425,7 +746,9 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
-                          color: _currentChange > 0 ? colors.info : colors.textPrimary,
+                          color: _currentChange > 0
+                              ? colors.info
+                              : colors.textPrimary,
                         ),
                       ),
                     ],
@@ -439,7 +762,8 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(AppStrings.cancel, style: TextStyle(color: colors.textSecondary)),
+          child:
+              Text(AppStrings.cancel, style: TextStyle(color: colors.textSecondary)),
         ),
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
@@ -448,9 +772,14 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
           icon: _isSaving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
               : const Icon(Icons.check, size: 18),
-          label: const Text('حفظ التعديلات وتحديث المخزون', style: TextStyle(fontWeight: FontWeight.bold)),
+          label: const Text('حفظ التعديلات وتحديث المخزون',
+              style: TextStyle(fontWeight: FontWeight.bold)),
           onPressed: _isSaving ? null : _saveChanges,
         ),
       ],

@@ -57,6 +57,7 @@ class POSProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      await DatabaseHelper.instance.ensureSchemaMigrations();
       await DatabaseHelper.instance.cleanupOrphanedProducts();
       _categories = await DatabaseHelper.instance.getAllCategories();
       _products = await DatabaseHelper.instance.getProducts(
@@ -93,6 +94,18 @@ class POSProvider with ChangeNotifier {
     loadPOSData();
   }
 
+  double getMaxStock(OrderItemModel item) {
+    for (final p in _products) {
+      for (final v in p.variants) {
+        if (v.id == item.variantId) {
+          item.maxStock = v.stockQuantity;
+          return v.stockQuantity;
+        }
+      }
+    }
+    return item.maxStock;
+  }
+
   void addVariantToCart(ProductModel product, ProductVariantModel variant, [double quantity = 1.0]) {
     if (variant.stockQuantity <= 0) {
       _statusMessage = 'المنتج غير متوفر بالمخزون!';
@@ -103,15 +116,19 @@ class POSProvider with ChangeNotifier {
     final existingIndex = _cartItems.indexWhere((item) => item.variantId == variant.id);
 
     if (existingIndex >= 0) {
-      final newQty = _cartItems[existingIndex].quantity + quantity;
-      if (newQty <= variant.stockQuantity || variant.stockQuantity <= 0) {
-        _cartItems[existingIndex].quantity = newQty;
+      final currentItem = _cartItems[existingIndex];
+      final maxStock = variant.stockQuantity;
+      currentItem.maxStock = maxStock;
+      final newQty = currentItem.quantity + quantity;
+      if (newQty <= maxStock) {
+        currentItem.quantity = newQty;
         _statusMessage = 'تمت زيادة الكمية';
       } else {
-        _cartItems[existingIndex].quantity = variant.stockQuantity;
-        _statusMessage = 'تم ضبط الكمية إلى الحد الأقصى للمخزون (${variant.stockQuantity})';
+        currentItem.quantity = maxStock;
+        _statusMessage = 'تم ضبط الكمية إلى الحد الأقصى للمخزون (${NumberParser.formatQuantity(maxStock)})';
       }
     } else {
+      final initialQty = quantity <= variant.stockQuantity ? quantity : variant.stockQuantity;
       _cartItems.add(OrderItemModel(
         variantId: variant.id!,
         productId: product.id!,
@@ -119,9 +136,10 @@ class POSProvider with ChangeNotifier {
         size: variant.size,
         color: variant.color,
         skuBarcode: variant.skuBarcode,
-        quantity: quantity,
+        quantity: initialQty,
         unitPrice: variant.sellingPrice,
         costPrice: variant.costPrice,
+        maxStock: variant.stockQuantity,
       ));
       _statusMessage = 'تمت إضافة الصنف للسلة';
     }
@@ -159,10 +177,17 @@ class POSProvider with ChangeNotifier {
 
   void updateQuantity(int index, double newQuantity) {
     if (index >= 0 && index < _cartItems.length) {
+      final item = _cartItems[index];
+      final maxStock = getMaxStock(item);
       if (newQuantity <= 0) {
         _cartItems.removeAt(index);
+        _statusMessage = null;
+      } else if (newQuantity > maxStock) {
+        item.quantity = maxStock;
+        _statusMessage = 'عفواً، أقصى كمية متاحة في المخزون هي ${NumberParser.formatQuantity(maxStock)}';
       } else {
-        _cartItems[index].quantity = newQuantity;
+        item.quantity = newQuantity;
+        _statusMessage = null;
       }
       if (_cartItems.isEmpty) {
         _amountPaid = 0.0;
@@ -176,7 +201,16 @@ class POSProvider with ChangeNotifier {
 
   void incrementQuantity(int index, [double step = 1.0]) {
     if (index >= 0 && index < _cartItems.length) {
-      _cartItems[index].quantity += step;
+      final item = _cartItems[index];
+      final maxStock = getMaxStock(item);
+      final newQty = item.quantity + step;
+      if (newQty <= maxStock) {
+        item.quantity = newQty;
+        _statusMessage = null;
+      } else {
+        item.quantity = maxStock;
+        _statusMessage = 'عفواً، أقصى كمية متاحة في المخزون هي ${NumberParser.formatQuantity(maxStock)}';
+      }
       if (_amountPaid < grandTotal) {
         _amountPaid = grandTotal;
       }

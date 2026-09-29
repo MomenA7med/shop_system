@@ -21,9 +21,22 @@ class DatabaseHelper {
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    if (_database != null) {
+      await _ensureOrdersDeliveryFeeColumnExists(_database!);
+      await _ensureProductsQuickItemColumnExists(_database!);
+      return _database!;
+    }
     _database = await _initDB('clothing_store_pos.db');
     return _database!;
+  }
+
+  Future<void> ensureSchemaMigrations() async {
+    final db = await database;
+    await _ensureSettingsColumnsExist(db);
+    await _ensureLicenseTableExists(db);
+    await _ensureProductsQuickItemColumnExists(db);
+    await _ensureOrdersDeliveryFeeColumnExists(db);
+    await _cleanupOrphanedProducts(db);
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -56,21 +69,33 @@ class DatabaseHelper {
   Future<void> _ensureProductsQuickItemColumnExists(Database db) async {
     try {
       final info = await db.rawQuery('PRAGMA table_info(products)');
-      final hasCol = info.any((col) => col['name'] == 'is_quick_item');
+      final hasCol = info.any((col) => (col['name']?.toString().toLowerCase()) == 'is_quick_item');
       if (!hasCol) {
         await db.execute('ALTER TABLE products ADD COLUMN is_quick_item INTEGER DEFAULT 0');
+        debugPrint('[DB Migration] Added is_quick_item column to products table.');
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DB Migration Warning] checking is_quick_item: $e');
+      try {
+        await db.execute('ALTER TABLE products ADD COLUMN is_quick_item INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
   }
 
   Future<void> _ensureOrdersDeliveryFeeColumnExists(Database db) async {
     try {
       final info = await db.rawQuery('PRAGMA table_info(orders)');
-      final hasCol = info.any((col) => col['name'] == 'delivery_fee');
+      final hasCol = info.any((col) => (col['name']?.toString().toLowerCase()) == 'delivery_fee');
       if (!hasCol) {
         await db.execute('ALTER TABLE orders ADD COLUMN delivery_fee REAL DEFAULT 0.0');
+        debugPrint('[DB Migration] Added delivery_fee column to orders table.');
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DB Migration Warning] checking delivery_fee: $e');
+      try {
+        await db.execute('ALTER TABLE orders ADD COLUMN delivery_fee REAL DEFAULT 0.0');
+      } catch (_) {}
+    }
   }
 
   Future<void> _cleanupOrphanedProducts(Database db) async {
@@ -612,6 +637,7 @@ class DatabaseHelper {
     required List<OrderItemModel> items,
   }) async {
     final db = await database;
+    await _ensureOrdersDeliveryFeeColumnExists(db);
     final now = DateTime.now();
     final invoiceNumber = 'INV-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.millisecondsSinceEpoch.toString().substring(8)}';
 
@@ -815,6 +841,7 @@ class DatabaseHelper {
     required double totalAmount,
     required double amountPaid,
     required double changeDue,
+    double deliveryFee = 0.0,
   }) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -903,6 +930,7 @@ class DatabaseHelper {
           'total_amount': totalAmount,
           'amount_paid': amountPaid,
           'change_due': changeDue,
+          'delivery_fee': deliveryFee,
         },
         where: 'id = ?',
         whereArgs: [orderId],

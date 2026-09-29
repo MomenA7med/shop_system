@@ -22,6 +22,9 @@ import 'package:shop_system/providers/pos_provider.dart';
 import 'package:shop_system/providers/settings_provider.dart';
 import 'package:shop_system/views/settings/settings_view.dart';
 import 'package:shop_system/core/utils/number_parser.dart';
+import 'package:shop_system/providers/invoices_provider.dart';
+import 'package:shop_system/providers/shift_provider.dart';
+import 'package:shop_system/views/invoices/widgets/edit_invoice_dialog.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -853,5 +856,80 @@ void main() {
     expect(find.text(AppStrings.storeSettings), findsOneWidget);
     expect(find.text('شعار المتجر (Logo)'), findsOneWidget);
     expect(find.text('اختيار شعار للمحل'), findsOneWidget);
+  });
+
+  testWidgets('EditInvoiceDialog displays and handles delivery fee and discount properly', (tester) async {
+    final settingsProvider = SettingsProvider(
+      initialSettings: StoreSettingsModel(
+        storeName: 'سوبر ماركت الفهد',
+        slogan: 'كل ما يلزم بيتك',
+        phone: '01012345678',
+        address: 'القاهرة، مصر',
+        currencySymbol: 'ج.م',
+      ),
+    );
+    final invoicesProvider = InvoicesProvider();
+    final inventoryProvider = InventoryProvider();
+    final shiftProvider = ShiftProvider();
+    final authProvider = AuthProvider();
+
+    final testOrder = OrderModel(
+      id: 99,
+      invoiceNumber: 'INV-20260929-19947',
+      cashierId: 1,
+      totalAmount: 25.0,
+      amountPaid: 25.0,
+      changeDue: 0.0,
+      deliveryFee: 10.0,
+      items: [
+        OrderItemModel(
+          id: 1,
+          orderId: 99,
+          variantId: 1,
+          productId: 1,
+          productName: 'مكرونه الملكه',
+          size: 'كيس',
+          color: 'نص',
+          skuBarcode: '26449592',
+          quantity: 1.0,
+          unitPrice: 15.0,
+          costPrice: 10.0,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: settingsProvider),
+          ChangeNotifierProvider.value(value: invoicesProvider),
+          ChangeNotifierProvider.value(value: inventoryProvider),
+          ChangeNotifierProvider.value(value: shiftProvider),
+          ChangeNotifierProvider.value(value: authProvider),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: EditInvoiceDialog(order: testOrder),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Verify Title and Subtitle
+    expect(find.text('تعديل الفاتورة #INV-20260929-19947'), findsOneWidget);
+    expect(find.text('تعديل الكميات والعناصر، الدليفري، الخصم، والمبالغ المسددة'), findsOneWidget);
+
+    // Verify Delivery and Discount fields exist
+    expect(find.text('الدليفري:'), findsOneWidget);
+    expect(find.text('الخصم:'), findsOneWidget);
+    expect(find.text('خدمة التوصيل (دليفري):'), findsOneWidget);
+
+    // Verify initial values
+    expect(find.text('10'), findsOneWidget); // delivery fee
+    expect(find.text('مكرونه الملكه'), findsOneWidget);
   });
 }

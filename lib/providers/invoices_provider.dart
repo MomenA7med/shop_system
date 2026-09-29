@@ -147,6 +147,7 @@ class InvoicesProvider with ChangeNotifier {
     required double totalAmount,
     required double amountPaid,
     required double changeDue,
+    double deliveryFee = 0.0,
   }) async {
     try {
       await DatabaseHelper.instance.updateOrder(
@@ -155,6 +156,7 @@ class InvoicesProvider with ChangeNotifier {
         totalAmount: totalAmount,
         amountPaid: amountPaid,
         changeDue: changeDue,
+        deliveryFee: deliveryFee,
       );
       await loadInvoices();
       return true;

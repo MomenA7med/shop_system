@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/utils/number_parser.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/settings_provider.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -118,6 +120,8 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final colors = context.colors;
+    final settings = context.watch<SettingsProvider>().settings;
+    final hasLogo = settings.logoPath != null && File(settings.logoPath!).existsSync();
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -162,20 +166,33 @@ class _LoginViewState extends State<LoginView> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Logo
+                        // Supermarket Logo / Icon
                         Container(
-                          padding: EdgeInsets.all(isSmallHeight ? 12 : 14),
+                          width: isSmallHeight ? 56 : 68,
+                          height: isSmallHeight ? 56 : 68,
+                          padding: EdgeInsets.all(hasLogo ? 4 : (isSmallHeight ? 12 : 14)),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [colors.primary, colors.secondary],
-                            ),
+                            gradient: hasLogo
+                                ? null
+                                : LinearGradient(
+                                    colors: [colors.primary, colors.secondary],
+                                  ),
+                            color: hasLogo ? colors.cardSurface : null,
                             shape: BoxShape.circle,
+                            border: hasLogo ? Border.all(color: colors.border, width: 1.5) : null,
                           ),
-                          child: Icon(
-                            Icons.checkroom_rounded,
-                            color: Colors.white,
-                            size: isSmallHeight ? 28 : 34,
-                          ),
+                          child: hasLogo
+                              ? ClipOval(
+                                  child: Image.file(
+                                    File(settings.logoPath!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.storefront_rounded,
+                                  color: Colors.white,
+                                  size: isSmallHeight ? 28 : 34,
+                                ),
                         ),
 
                         SizedBox(height: isSmallHeight ? 10 : 14),

@@ -349,6 +349,10 @@ class InvoiceDetailsDialog extends StatelessWidget {
                   ] else ...[
                     _buildStatItem('إجمالي الفاتورة', CurrencyFormatter.format(order.totalAmount, symbol: settings.currencySymbol), colors.primary, colors),
                   ],
+                  if (order.deliveryFee > 0)
+                    _buildStatItem('الدليفري (+)', '+ ${CurrencyFormatter.format(order.deliveryFee, symbol: settings.currencySymbol)}', AppColors.accent, colors),
+                  if (order.discountAmount > 0)
+                    _buildStatItem('الخصم (-)', '- ${CurrencyFormatter.format(order.discountAmount, symbol: settings.currencySymbol)}', AppColors.warning, colors),
                   _buildStatItem('المبلغ المستلم', CurrencyFormatter.format(order.amountPaid, symbol: settings.currencySymbol), colors.textPrimary, colors),
                   _buildStatItem('الباقي للعميل', CurrencyFormatter.format(order.changeDue, symbol: settings.currencySymbol), order.changeDue > 0 ? colors.info : colors.textMuted, colors),
                   _buildStatItem(

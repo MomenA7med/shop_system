@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
@@ -36,7 +37,14 @@ class _CartPanelState extends State<CartPanel> {
   double _lastDeliveryFee = -1.0;
 
   @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleGlobalKey);
+  }
+
+  @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleGlobalKey);
     _paidCtrl.dispose();
     _paidFocusNode.dispose();
     _discountCtrl.dispose();
@@ -44,6 +52,26 @@ class _CartPanelState extends State<CartPanel> {
     _deliveryCtrl.dispose();
     _deliveryFocusNode.dispose();
     super.dispose();
+  }
+
+  bool _handleGlobalKey(KeyEvent event) {
+    if (!mounted) return false;
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.f1) {
+        final pos = context.read<POSProvider>();
+        if (pos.canCheckout) {
+          _handleCheckout(saveAndPrint: true);
+          return true;
+        }
+      } else if (event.logicalKey == LogicalKeyboardKey.f3) {
+        final pos = context.read<POSProvider>();
+        if (pos.canCheckout) {
+          _handleCheckout(saveAndPrint: false);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   void _syncPaidAmount(POSProvider pos) {
@@ -199,6 +227,7 @@ class _CartPanelState extends State<CartPanel> {
     AppColorsExtension colors,
     settings,
   ) {
+    final maxStock = pos.getMaxStock(item);
     final TextEditingController qtyCtrl = TextEditingController(
       text: NumberParser.formatQuantity(item.quantity),
     );
@@ -208,7 +237,8 @@ class _CartPanelState extends State<CartPanel> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setModalState) {
           final currentQty = NumberParser.tryParseDouble(qtyCtrl.text, 1.0);
-          final currentTotal = currentQty * item.unitPrice;
+          final isOverStock = currentQty > maxStock;
+          final currentTotal = (isOverStock ? maxStock : currentQty) * item.unitPrice;
 
           return Directionality(
             textDirection: TextDirection.rtl,
@@ -244,12 +274,33 @@ class _CartPanelState extends State<CartPanel> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          'سعر الوحدة (${item.size}): ${CurrencyFormatter.format(item.unitPrice, symbol: settings.currencySymbol)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.textMuted,
-                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              'سعر (${item.size}): ${CurrencyFormatter.format(item.unitPrice, symbol: settings.currencySymbol)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'المتاح بالمخزون: ${NumberParser.formatQuantity(maxStock)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -274,14 +325,14 @@ class _CartPanelState extends State<CartPanel> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        _buildPresetWeightChip('ثمن (0.125)', 0.125, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('ربع (0.250)', 0.250, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('تلت (0.333)', 0.333, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('نصف (0.500)', 0.500, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('إلا ربع (0.750)', 0.750, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('1 كجم', 1.0, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('1.5 كجم', 1.5, qtyCtrl, () => setModalState(() {})),
-                        _buildPresetWeightChip('2 كجم', 2.0, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('ثمن (0.125)', 0.125, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('ربع (0.250)', 0.250, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('تلت (0.333)', 0.333, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('نصف (0.500)', 0.500, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('إلا ربع (0.750)', 0.750, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('1 كجم', 1.0, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('1.5 كجم', 1.5, maxStock, qtyCtrl, () => setModalState(() {})),
+                        _buildPresetWeightChip('2 كجم', 2.0, maxStock, qtyCtrl, () => setModalState(() {})),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -314,7 +365,12 @@ class _CartPanelState extends State<CartPanel> {
                               icon: const Icon(Icons.add_circle_outline, size: 20),
                               onPressed: () {
                                 final current = NumberParser.tryParseDouble(qtyCtrl.text, 0.0);
-                                qtyCtrl.text = NumberParser.formatQuantity(current + 0.05);
+                                final next = current + 0.05;
+                                if (next <= maxStock) {
+                                  qtyCtrl.text = NumberParser.formatQuantity(next);
+                                } else {
+                                  qtyCtrl.text = NumberParser.formatQuantity(maxStock);
+                                }
                                 setModalState(() {});
                               },
                             ),
@@ -324,6 +380,17 @@ class _CartPanelState extends State<CartPanel> {
                       ),
                       onChanged: (_) => setModalState(() {}),
                     ),
+                    if (isOverStock) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '⚠️ الكمية تتجاوز المتاح بالمخزون (${NumberParser.formatQuantity(maxStock)})',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: colors.error,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -366,7 +433,16 @@ class _CartPanelState extends State<CartPanel> {
                   ),
                   onPressed: () {
                     final parsed = NumberParser.tryParseDouble(qtyCtrl.text, 1.0);
-                    if (parsed > 0) {
+                    if (parsed > maxStock) {
+                      pos.updateQuantity(index, maxStock);
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('تم ضبط الكمية على الحد الأقصى للمخزون (${NumberParser.formatQuantity(maxStock)})'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else if (parsed > 0) {
                       pos.updateQuantity(index, parsed);
                     }
                     Navigator.of(dialogCtx).pop();
@@ -384,28 +460,32 @@ class _CartPanelState extends State<CartPanel> {
   Widget _buildPresetWeightChip(
     String label,
     double value,
+    double maxStock,
     TextEditingController controller,
     VoidCallback onUpdated,
   ) {
+    final isAllowed = value <= maxStock;
     return InkWell(
       borderRadius: BorderRadius.circular(6),
       onTap: () {
-        controller.text = NumberParser.formatQuantity(value);
+        controller.text = NumberParser.formatQuantity(value > maxStock ? maxStock : value);
         onUpdated();
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: context.colors.cardSurface,
+          color: isAllowed ? context.colors.cardSurface : context.colors.surfaceLight.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: context.colors.border),
+          border: Border.all(
+            color: isAllowed ? context.colors.border : context.colors.border.withValues(alpha: 0.4),
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: context.colors.textPrimary,
+            color: isAllowed ? context.colors.textPrimary : context.colors.textMuted,
           ),
         ),
       ),
@@ -581,23 +661,50 @@ class _CartPanelState extends State<CartPanel> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: colors.primary.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          specLabel,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: colors.primary.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              specLabel,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: colors.isDark ? colors.primaryLight : colors.primaryDark,
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: (item.quantity >= pos.getMaxStock(item))
+                                                  ? colors.warning.withValues(alpha: 0.15)
+                                                  : colors.surfaceLight,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'المتاح: ${NumberParser.formatQuantity(pos.getMaxStock(item))}',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: (item.quantity >= pos.getMaxStock(item))
+                                                    ? colors.warning
+                                                    : colors.textMuted,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -711,20 +818,37 @@ class _CartPanelState extends State<CartPanel> {
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.add_circle_outline,
                                         size: 20,
+                                        color: (item.quantity >= pos.getMaxStock(item))
+                                            ? colors.textMuted.withValues(alpha: 0.35)
+                                            : colors.primary,
                                       ),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(
                                         minWidth: 28,
                                         minHeight: 28,
                                       ),
-                                      color: colors.primary,
-                                      onPressed: () => pos.incrementQuantity(
-                                        index,
-                                        item.quantity < 1.0 ? 0.25 : 1.0,
-                                      ),
+                                      onPressed: (item.quantity >= pos.getMaxStock(item))
+                                          ? () {
+                                              final maxStock = pos.getMaxStock(item);
+                                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'عفواً، لا يمكن زيادة الكمية؛ المتاح بالمخزون هو (${NumberParser.formatQuantity(maxStock)}) فقط!',
+                                                  ),
+                                                  backgroundColor: colors.warning,
+                                                  behavior: SnackBarBehavior.floating,
+                                                  duration: const Duration(seconds: 2),
+                                                ),
+                                              );
+                                            }
+                                          : () => pos.incrementQuantity(
+                                              index,
+                                              item.quantity < 1.0 ? 0.25 : 1.0,
+                                            ),
                                     ),
                                   ],
                                 ),
@@ -818,23 +942,6 @@ class _CartPanelState extends State<CartPanel> {
                     ),
                   ],
                 ),
-
-                // Quick Cash Addition Chips
-                if (cartItems.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _buildQuickCashChip('+5 ج', 5, pos),
-                      _buildQuickCashChip('+10 ج', 10, pos),
-                      _buildQuickCashChip('+20 ج', 20, pos),
-                      _buildQuickCashChip('+50 ج', 50, pos),
-                      _buildQuickCashChip('+100 ج', 100, pos),
-                      _buildQuickCashChip('+200 ج', 200, pos),
-                    ],
-                  ),
-                ],
 
                 const SizedBox(height: 10),
 
@@ -1368,37 +1475,6 @@ class _CartPanelState extends State<CartPanel> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickCashChip(String label, double amount, POSProvider pos) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () {
-        final current = pos.amountPaid;
-        final next = current + amount;
-        pos.setAmountPaid(next);
-        _lastAmountPaid = next;
-        _paidCtrl.text = next % 1 == 0
-            ? next.toInt().toString()
-            : next.toStringAsFixed(2);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: context.colors.cardSurface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: context.colors.border),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: context.colors.primaryLight,
-          ),
-        ),
       ),
     );
   }

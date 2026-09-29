@@ -11,6 +11,7 @@ class OrderItemModel {
   final double unitPrice;
   final double costPrice;
   double returnedQuantity;
+  double maxStock;
 
   OrderItemModel({
     this.id,
@@ -25,6 +26,7 @@ class OrderItemModel {
     required this.unitPrice,
     required this.costPrice,
     this.returnedQuantity = 0.0,
+    this.maxStock = double.infinity,
   });
 
   double get totalPrice => quantity * unitPrice;

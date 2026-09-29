@@ -14,18 +14,20 @@ class AppStrings {
   static const String navLogout = 'تسجيل الخروج';
 
   // POS
-  static const String searchProductOrBarcode = 'امسح الباركود أو ابحث عن صنف...';
+  static const String searchProductOrBarcode =
+      'امسح الباركود أو ابحث عن صنف...';
   static const String allCategories = 'جميع الأقسام';
   static const String currentOrder = 'الفاتورة الحالية';
-  static const String emptyCart = 'الفاتورة فارغة، امسح الباركود أو اختر صنفاً للبدء';
+  static const String emptyCart =
+      'الفاتورة فارغة، امسح الباركود أو اختر صنفاً للبدء';
   static const String subtotal = 'المجموع الفرعي';
   static const String tax = 'الضريبة';
   static const String grandTotal = 'الإجمالي المطلوب';
   static const String cashReceived = 'المبلغ المستلم نقداً';
   static const String changeDue = 'الباقي للعميل';
   static const String confirmPayment = 'تأكيد الدفع وطباعة الفاتورة';
-  static const String saveAndPrint = 'حفظ وطباعة (F12)';
-  static const String saveWithoutPrint = 'حفظ بدون طباعة (F10)';
+  static const String saveAndPrint = 'حفظ وطباعة (F1)';
+  static const String saveWithoutPrint = 'حفظ بدون طباعة (F3)';
   static const String exactAmount = 'المبلغ بالكامل';
   static const String clearCart = 'إلغاء الفاتورة';
   static const String invoicePreview = 'معاينة الفاتورة';
@@ -55,12 +57,14 @@ class AppStrings {
 
   // Returns
   static const String returnsTitle = 'معالجة المرتجعات والتبديل';
-  static const String searchInvoiceOrBarcode = 'أدخل رقم الفاتورة أو امسح الباركود...';
+  static const String searchInvoiceOrBarcode =
+      'أدخل رقم الفاتورة أو امسح الباركود...';
   static const String returnQuantity = 'الكمية المسترجعة';
   static const String returnReason = 'سبب الإرجاع';
   static const String refundAmount = 'المبلغ المسترد (نقداً)';
   static const String confirmReturn = 'تأكيد الإرجاع وإعادة المخزون';
-  static const String returnSuccess = 'تمت عملية الإرجاع بنجاح وتحديث المخزون والدرج النقدي';
+  static const String returnSuccess =
+      'تمت عملية الإرجاع بنجاح وتحديث المخزون والدرج النقدي';
 
   // Shifts
   static const String shiftTitle = 'إدارة الوردية والصندوق';
@@ -96,7 +100,8 @@ class AppStrings {
   static const String backupDatabase = 'نسخ احتياطي للبيانات';
   static const String restoreDatabase = 'استعادة نسخة احتياطية';
   static const String backupSuccess = 'تم حفظ النسخة الاحتياطية بنجاح';
-  static const String restoreSuccess = 'تمت استعادة البيانات بنجاح، يُرجى إعادة تشغيل التطبيق';
+  static const String restoreSuccess =
+      'تمت استعادة البيانات بنجاح، يُرجى إعادة تشغيل التطبيق';
 
   // Auth & Roles
   static const String loginTitle = 'تسجيل الدخول للنظام';

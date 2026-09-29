@@ -104,7 +104,7 @@ class CustomSidebar extends StatelessWidget {
                           ),
                         )
                       : const Icon(
-                          Icons.shopping_cart_rounded,
+                          Icons.storefront_rounded,
                           color: Colors.white,
                           size: 22,
                         ),

@@ -45,8 +45,9 @@ void main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  // Pre-initialize database
+  // Pre-initialize database & schema migrations
   await DatabaseHelper.instance.database;
+  await DatabaseHelper.instance.ensureSchemaMigrations();
 
   // Pre-load store settings to establish theme before first frame renders
   StoreSettingsModel? initialSettings;

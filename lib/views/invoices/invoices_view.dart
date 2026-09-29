@@ -180,7 +180,7 @@ class _InvoicesViewState extends State<InvoicesView> {
                     subtitle: invoicesProv.totalReturnedItemsCount > 0
                         ? 'مسترجع: ${invoicesProv.totalReturnedItemsCount} قطعة'
                         : null,
-                    icon: Icons.checkroom_outlined,
+                    icon: Icons.shopping_basket_outlined,
                     iconColor: colors.success,
                     colors: colors,
                   ),
