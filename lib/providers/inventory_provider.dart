@@ -19,7 +19,7 @@ class InventoryProvider with ChangeNotifier {
   String get searchQuery => _searchQuery;
   bool get isLoading => _isLoading;
 
-  int get totalStockPieces => _products.fold(0, (sum, p) => sum + p.totalStock);
+  double get totalStockPieces => _products.fold(0.0, (sum, p) => sum + p.totalStock);
   int get totalVariantsCount => _products.fold(0, (sum, p) => sum + p.variants.length);
   double get totalInventoryCostValue => _products.fold(0.0, (sum, p) => sum + p.variants.fold(0.0, (vSum, v) => vSum + (v.stockQuantity * v.costPrice)));
   double get totalInventorySellingValue => _products.fold(0.0, (sum, p) => sum + p.variants.fold(0.0, (vSum, v) => vSum + (v.stockQuantity * v.sellingPrice)));

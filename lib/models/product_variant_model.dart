@@ -7,8 +7,8 @@ class ProductVariantModel {
   final String color;
   final double costPrice;
   final double sellingPrice;
-  final int stockQuantity;
-  final int minStockAlert;
+  final double stockQuantity;
+  final double minStockAlert;
 
   ProductVariantModel({
     this.id,
@@ -20,7 +20,7 @@ class ProductVariantModel {
     required this.costPrice,
     required this.sellingPrice,
     required this.stockQuantity,
-    this.minStockAlert = 2,
+    this.minStockAlert = 2.0,
   });
 
   bool get isLowStock => stockQuantity <= minStockAlert && stockQuantity > 0;
@@ -51,8 +51,8 @@ class ProductVariantModel {
       color: map['color'] as String,
       costPrice: (map['cost_price'] as num).toDouble(),
       sellingPrice: (map['selling_price'] as num).toDouble(),
-      stockQuantity: map['stock_quantity'] as int,
-      minStockAlert: (map['min_stock_alert'] as int?) ?? 2,
+      stockQuantity: (map['stock_quantity'] as num).toDouble(),
+      minStockAlert: (map['min_stock_alert'] as num?)?.toDouble() ?? 2.0,
     );
   }
 
@@ -65,8 +65,8 @@ class ProductVariantModel {
     String? color,
     double? costPrice,
     double? sellingPrice,
-    int? stockQuantity,
-    int? minStockAlert,
+    double? stockQuantity,
+    double? minStockAlert,
   }) {
     return ProductVariantModel(
       id: id ?? this.id,

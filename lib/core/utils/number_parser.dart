@@ -33,6 +33,33 @@ class NumberParser {
     return parsedDouble?.toInt() ?? defaultValue;
   }
 
+  /// Formats a quantity value cleanly (e.g. 1.0 -> '1', 0.5 -> '0.5', 0.25 -> '0.25', 0.333 -> '0.333')
+  static String formatQuantity(num quantity) {
+    if (quantity % 1 == 0) {
+      return quantity.toInt().toString();
+    }
+    return quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
+  }
+
+  /// Parses textual quantity input including common Arabic supermarket fractions:
+  /// 'ربع' -> 0.25, 'نص' -> 0.5, 'تلت' -> 0.333, 'تمن' -> 0.125, 'كيلو ونص' -> 1.5, etc.
+  static double parseQuantity(String input, [double fallback = 1.0]) {
+    final clean = input.trim().toLowerCase().replaceAll(' ', '');
+    if (clean.isEmpty) return fallback;
+
+    // Direct fraction matching
+    if (clean == 'ربع' || clean == '1/4' || clean == '¼' || clean == 'ربعكيلو') return 0.25;
+    if (clean == 'نص' || clean == 'نصف' || clean == '1/2' || clean == '½' || clean == 'نصكيلو') return 0.5;
+    if (clean == 'تلت' || clean == 'ثلث' || clean == '1/3' || clean == '⅓' || clean == 'تلتكيلو') return 0.333;
+    if (clean == 'تمن' || clean == 'ثمن' || clean == '1/8' || clean == '⅛' || clean == 'تمنكيلو') return 0.125;
+    if (clean == 'الاربع' || clean == 'إلاربع' || clean == '3/4' || clean == '¾' || clean == 'ثلاثةاربع') return 0.75;
+    if (clean == 'كيلوونص' || clean == 'كيلوونصف') return 1.5;
+    if (clean == 'كيلووربع') return 1.25;
+    if (clean == 'كيلو') return 1.0;
+
+    return tryParseDouble(input, fallback);
+  }
+
   /// Checks whether a character is an Arabic or English numeric digit.
   static bool isDigit(String char) {
     if (char.isEmpty) return false;

@@ -8,7 +8,7 @@ class ReturnModel {
   final String size;
   final String color;
   final String skuBarcode;
-  final int quantity;
+  final double quantity;
   final double refundAmount;
   final String reason;
   final DateTime createdAt;
@@ -58,7 +58,7 @@ class ReturnModel {
       size: map['size'] as String? ?? '',
       color: map['color'] as String? ?? '',
       skuBarcode: map['sku_barcode'] as String? ?? '',
-      quantity: map['quantity'] as int,
+      quantity: (map['quantity'] as num).toDouble(),
       refundAmount: (map['refund_amount'] as num).toDouble(),
       reason: map['reason'] as String? ?? 'طلب العميل',
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),

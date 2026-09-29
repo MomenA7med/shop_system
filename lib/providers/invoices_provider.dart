@@ -41,9 +41,9 @@ class InvoicesProvider with ChangeNotifier {
   double get netSalesAmount => _invoices.fold(0.0, (sum, order) => sum + order.netTotalAmount);
   double get totalRefundedAmount => _invoices.fold(0.0, (sum, order) => sum + order.refundedAmount);
   int get totalInvoicesCount => _invoices.length;
-  int get totalItemsCount => _invoices.fold(0, (sum, order) => sum + order.totalItemCount);
-  int get remainingItemsCount => _invoices.fold(0, (sum, order) => sum + order.remainingPieces);
-  int get totalReturnedItemsCount => _invoices.fold(0, (sum, order) => sum + order.totalReturnedPieces);
+  double get totalItemsCount => _invoices.fold(0.0, (sum, order) => sum + order.totalItemCount);
+  double get remainingItemsCount => _invoices.fold(0.0, (sum, order) => sum + order.remainingPieces);
+  double get totalReturnedItemsCount => _invoices.fold(0.0, (sum, order) => sum + order.totalReturnedPieces);
   double get averageInvoiceValue => _invoices.isEmpty ? 0.0 : netSalesAmount / _invoices.length;
 
   Future<void> loadInvoices() async {

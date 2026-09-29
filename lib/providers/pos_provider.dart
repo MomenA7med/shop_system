@@ -68,7 +68,7 @@ class POSProvider with ChangeNotifier {
     loadPOSData();
   }
 
-  void addVariantToCart(ProductModel product, ProductVariantModel variant) {
+  void addVariantToCart(ProductModel product, ProductVariantModel variant, [double quantity = 1.0]) {
     if (variant.stockQuantity <= 0) {
       _statusMessage = 'المنتج غير متوفر بالمخزون!';
       notifyListeners();
@@ -78,11 +78,13 @@ class POSProvider with ChangeNotifier {
     final existingIndex = _cartItems.indexWhere((item) => item.variantId == variant.id);
 
     if (existingIndex >= 0) {
-      if (_cartItems[existingIndex].quantity < variant.stockQuantity) {
-        _cartItems[existingIndex].quantity += 1;
+      final newQty = _cartItems[existingIndex].quantity + quantity;
+      if (newQty <= variant.stockQuantity || variant.stockQuantity <= 0) {
+        _cartItems[existingIndex].quantity = newQty;
         _statusMessage = 'تمت زيادة الكمية';
       } else {
-        _statusMessage = 'الكمية المطلوبة تتجاوز المخزون المتوفر (${variant.stockQuantity})';
+        _cartItems[existingIndex].quantity = variant.stockQuantity;
+        _statusMessage = 'تم ضبط الكمية إلى الحد الأقصى للمخزون (${variant.stockQuantity})';
       }
     } else {
       _cartItems.add(OrderItemModel(
@@ -92,7 +94,7 @@ class POSProvider with ChangeNotifier {
         size: variant.size,
         color: variant.color,
         skuBarcode: variant.skuBarcode,
-        quantity: 1,
+        quantity: quantity,
         unitPrice: variant.sellingPrice,
         costPrice: variant.costPrice,
       ));
@@ -130,9 +132,26 @@ class POSProvider with ChangeNotifier {
     }
   }
 
-  void incrementQuantity(int index) {
+  void updateQuantity(int index, double newQuantity) {
     if (index >= 0 && index < _cartItems.length) {
-      _cartItems[index].quantity += 1;
+      if (newQuantity <= 0) {
+        _cartItems.removeAt(index);
+      } else {
+        _cartItems[index].quantity = newQuantity;
+      }
+      if (_cartItems.isEmpty) {
+        _amountPaid = 0.0;
+        _discount = 0.0;
+      } else {
+        _amountPaid = grandTotal;
+      }
+      notifyListeners();
+    }
+  }
+
+  void incrementQuantity(int index, [double step = 1.0]) {
+    if (index >= 0 && index < _cartItems.length) {
+      _cartItems[index].quantity += step;
       if (_amountPaid < grandTotal) {
         _amountPaid = grandTotal;
       }
@@ -140,10 +159,11 @@ class POSProvider with ChangeNotifier {
     }
   }
 
-  void decrementQuantity(int index) {
+  void decrementQuantity(int index, [double step = 1.0]) {
     if (index >= 0 && index < _cartItems.length) {
-      if (_cartItems[index].quantity > 1) {
-        _cartItems[index].quantity -= 1;
+      final current = _cartItems[index].quantity;
+      if (current > step) {
+        _cartItems[index].quantity = (current - step);
       } else {
         _cartItems.removeAt(index);
       }

@@ -378,7 +378,7 @@ class _EditInvoiceDialogState extends State<EditInvoiceDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'إجمالي الفاتورة الجديد (${_editableItems.fold(0, (s, i) => s + i.quantity)} قطع):',
+                        'إجمالي الفاتورة الجديد (${NumberParser.formatQuantity(_editableItems.fold(0.0, (s, i) => s + i.quantity))} وحدة):',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: colors.textPrimary),
                       ),
                       Text(

@@ -7,10 +7,10 @@ class OrderItemModel {
   final String size;
   final String color;
   final String skuBarcode;
-  int quantity;
+  double quantity;
   final double unitPrice;
   final double costPrice;
-  int returnedQuantity;
+  double returnedQuantity;
 
   OrderItemModel({
     this.id,
@@ -24,13 +24,13 @@ class OrderItemModel {
     required this.quantity,
     required this.unitPrice,
     required this.costPrice,
-    this.returnedQuantity = 0,
+    this.returnedQuantity = 0.0,
   });
 
   double get totalPrice => quantity * unitPrice;
   double get totalCost => quantity * costPrice;
   double get profit => totalPrice - totalCost;
-  int get remainingQuantity => (quantity - returnedQuantity).clamp(0, quantity);
+  double get remainingQuantity => (quantity - returnedQuantity).clamp(0.0, quantity);
   double get netTotalPrice => remainingQuantity * unitPrice;
   double get netCost => remainingQuantity * costPrice;
   double get netProfit => netTotalPrice - netCost;
@@ -64,10 +64,10 @@ class OrderItemModel {
       size: map['size'] as String? ?? '',
       color: map['color'] as String? ?? '',
       skuBarcode: map['sku_barcode'] as String? ?? '',
-      quantity: map['quantity'] as int,
+      quantity: (map['quantity'] as num).toDouble(),
       unitPrice: (map['unit_price'] as num).toDouble(),
       costPrice: (map['cost_price'] as num?)?.toDouble() ?? 0.0,
-      returnedQuantity: (map['returned_quantity'] as int?) ?? 0,
+      returnedQuantity: (map['returned_quantity'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

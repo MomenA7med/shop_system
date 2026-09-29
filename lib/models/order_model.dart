@@ -31,12 +31,12 @@ class OrderModel {
 
   double get totalProfit => items.fold(0.0, (sum, item) => sum + item.profit);
   double get netProfit => items.fold(0.0, (sum, item) => sum + item.netProfit);
-  int get totalItemCount => items.fold(0, (sum, item) => sum + item.quantity);
-  int get totalPieces => totalItemCount;
-  int get remainingItemCount => items.fold(0, (sum, item) => sum + item.remainingQuantity);
-  int get remainingPieces => remainingItemCount;
-  int get totalReturnedCount => items.fold(0, (sum, item) => sum + item.returnedQuantity);
-  int get totalReturnedPieces => totalReturnedCount;
+  double get totalItemCount => items.fold(0.0, (sum, item) => sum + item.quantity);
+  double get totalPieces => totalItemCount;
+  double get remainingItemCount => items.fold(0.0, (sum, item) => sum + item.remainingQuantity);
+  double get remainingPieces => remainingItemCount;
+  double get totalReturnedCount => items.fold(0.0, (sum, item) => sum + item.returnedQuantity);
+  double get totalReturnedPieces => totalReturnedCount;
   int get activeItemsCount => items.where((i) => i.remainingQuantity > 0).length;
   int get returnedItemsCount => items.where((i) => i.returnedQuantity > 0).length;
   double get itemsSubtotal => items.fold(0.0, (sum, item) => sum + item.totalPrice);
@@ -77,6 +77,36 @@ class OrderModel {
       status: map['status'] as String? ?? 'completed',
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
       items: items ?? [],
+    );
+  }
+
+  OrderModel copyWith({
+    int? id,
+    String? invoiceNumber,
+    int? cashierId,
+    String? cashierName,
+    int? shiftId,
+    double? totalAmount,
+    double? amountPaid,
+    double? changeDue,
+    String? paymentMethod,
+    String? status,
+    DateTime? createdAt,
+    List<OrderItemModel>? items,
+  }) {
+    return OrderModel(
+      id: id ?? this.id,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      cashierId: cashierId ?? this.cashierId,
+      cashierName: cashierName ?? this.cashierName,
+      shiftId: shiftId ?? this.shiftId,
+      totalAmount: totalAmount ?? this.totalAmount,
+      amountPaid: amountPaid ?? this.amountPaid,
+      changeDue: changeDue ?? this.changeDue,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      items: items ?? this.items,
     );
   }
 }

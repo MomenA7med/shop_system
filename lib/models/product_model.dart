@@ -19,7 +19,7 @@ class ProductModel {
     this.variants = const [],
   }) : createdAt = createdAt ?? DateTime.now();
 
-  int get totalStock => variants.fold(0, (sum, v) => sum + v.stockQuantity);
+  double get totalStock => variants.fold(0.0, (sum, v) => sum + v.stockQuantity);
   double get minPrice => variants.isEmpty
       ? 0.0
       : variants.map((v) => v.sellingPrice).reduce((a, b) => a < b ? a : b);

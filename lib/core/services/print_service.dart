@@ -920,7 +920,7 @@ class PrintService {
 
     final totalProducts = products.length;
     final totalVariants = products.fold(0, (sum, p) => sum + p.variants.length);
-    final totalStockPieces = products.fold(0, (sum, p) => sum + p.totalStock);
+    final totalStockPieces = products.fold(0.0, (sum, p) => sum + p.totalStock);
     final totalCostValue = products.fold(
       0.0,
       (sum, p) => sum + p.variants.fold(0.0, (vSum, v) => vSum + (v.stockQuantity * v.costPrice)),

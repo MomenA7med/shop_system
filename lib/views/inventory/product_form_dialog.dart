@@ -182,8 +182,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
           color: v.colorCtrl.text.trim(),
           costPrice: NumberParser.tryParseDouble(v.costCtrl.text.trim(), 0.0),
           sellingPrice: NumberParser.tryParseDouble(v.priceCtrl.text.trim(), 0.0),
-          stockQuantity: NumberParser.tryParseInt(v.stockCtrl.text.trim(), 0),
-          minStockAlert: NumberParser.tryParseInt(v.minAlertCtrl.text.trim(), 2),
+          stockQuantity: NumberParser.tryParseDouble(v.stockCtrl.text.trim(), 0.0),
+          minStockAlert: NumberParser.tryParseDouble(v.minAlertCtrl.text.trim(), 2.0),
         );
       }).toList();
 
