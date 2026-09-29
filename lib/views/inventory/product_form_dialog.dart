@@ -284,21 +284,22 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: AppStrings.productName,
-                        hintText: 'مثال: قميص كتان كاجوال',
+                        hintText: 'مثال: شويبس رمان كانز 240 مل',
                       ),
-                      validator: (val) => val == null || val.trim().isEmpty ? 'يرجى إدخال اسم المنتج' : null,
+                      validator: (val) => val == null || val.trim().isEmpty ? 'يرجى إدخال اسم الصنف' : null,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
 
                   // Category Selector with inline Manage button
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
+                            isExpanded: true,
                             initialValue: categories.any((c) => c.id == _selectedCategoryId)
                                 ? _selectedCategoryId
                                 : (categories.isNotEmpty ? categories.first.id : null),
@@ -314,9 +315,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         IconButton(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
                           icon: const Icon(Icons.settings_outlined, size: 20, color: AppColors.primary),
                           tooltip: 'إدارة وتعديل التصنيفات',
                           onPressed: () {
@@ -329,7 +331,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
 
                   // Default Low Stock Alert Input
                   Expanded(
@@ -342,16 +344,17 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                             controller: _defaultMinAlertController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
-                              labelText: 'حد تنبيه النقص الافتراضي',
+                              labelText: 'تنبيه النقص الافتراضي',
                               hintText: '2',
-                              helperText: 'العدد للتنبيه بنقص المخزون',
+                              helperText: 'الحد الأدنى للتنبيه',
                             ),
                             validator: (val) => val == null || val.trim().isEmpty ? 'مطلوب' : null,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         IconButton(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
                           icon: const Icon(Icons.playlist_add_check_rounded, size: 20, color: AppColors.secondary),
                           tooltip: 'تطبيق حد التنبيه على كل الصفوف',
                           onPressed: _applyDefaultMinAlertToAll,
