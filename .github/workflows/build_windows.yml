@@ -40,19 +40,6 @@ jobs:
       - name: Build Windows Release (.exe)
         run: flutter build windows --release
 
-      - name: Bundle Essential DLLs (sqlite3, d3dcompiler_47 & VC Runtime)
-        shell: pwsh
-        run: |
-          # 1. Copy local verified 64-bit sqlite3.dll into release folder
-          Copy-Item "installer\redist\sqlite3.dll" -Destination "build\windows\x64\runner\Release\" -Force -ErrorAction SilentlyContinue
-
-          # 2. Bundle DirectX & Microsoft Visual C++ Runtime DLLs
-          Copy-Item "C:\Windows\System32\d3dcompiler_47.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
-          Copy-Item "C:\Windows\System32\vcruntime140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
-          Copy-Item "C:\Windows\System32\vcruntime140_1.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
-          Copy-Item "C:\Windows\System32\msvcp140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
-          Copy-Item "C:\Windows\System32\winsqlite3.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
-
       - name: Compress Release Bundle into ZIP
         shell: pwsh
         run: |
