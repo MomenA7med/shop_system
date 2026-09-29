@@ -40,13 +40,22 @@ jobs:
       - name: Build Windows Release (.exe)
         run: flutter build windows --release
 
-      - name: Bundle Essential DLLs (d3dcompiler_47 & VC Runtime)
+      - name: Bundle Essential DLLs (sqlite3, d3dcompiler_47 & VC Runtime)
         shell: pwsh
         run: |
+          # 1. Download pre-compiled 64-bit sqlite3.dll
+          try {
+            Invoke-WebRequest -Uri "https://github.com/simolus3/sqlite3.dart/raw/main/sqlite3/assets/sqlite3.dll" -OutFile "build\windows\x64\runner\Release\sqlite3.dll"
+          } catch {
+            Write-Host "Warning: Failed to download sqlite3.dll via GitHub, will rely on Windows fallback"
+          }
+
+          # 2. Bundle DirectX & Microsoft Visual C++ Runtime DLLs
           Copy-Item "C:\Windows\System32\d3dcompiler_47.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
           Copy-Item "C:\Windows\System32\vcruntime140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
           Copy-Item "C:\Windows\System32\vcruntime140_1.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
           Copy-Item "C:\Windows\System32\msvcp140.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
+          Copy-Item "C:\Windows\System32\winsqlite3.dll" -Destination "build\windows\x64\runner\Release\" -ErrorAction SilentlyContinue
 
       - name: Compress Release Bundle into ZIP
         shell: pwsh

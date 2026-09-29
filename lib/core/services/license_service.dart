@@ -58,16 +58,25 @@ class LicenseService {
 
     try {
       if (Platform.isWindows) {
-        // 1. Get Motherboard Serial Number via PowerShell
+        // Helper to run commands with a strict 2-second timeout
+        Future<ProcessResult?> runWithTimeout(String executable, List<String> args) async {
+          try {
+            return await Process.run(executable, args).timeout(const Duration(seconds: 2));
+          } catch (_) {
+            return null;
+          }
+        }
+
+        // 1. Get Motherboard Serial Number via PowerShell (2-second timeout)
         try {
-          final mbResult = await Process.run('powershell', [
+          final mbResult = await runWithTimeout('powershell', [
             '-NoProfile',
             '-ExecutionPolicy',
             'Bypass',
             '-Command',
             '(Get-CimInstance Win32_BaseBoard).SerialNumber',
           ]);
-          final out = mbResult.stdout.toString().trim();
+          final out = mbResult?.stdout.toString().trim() ?? '';
           if (out.isNotEmpty && out.toLowerCase() != 'null') {
             motherboard = out.toUpperCase();
           }
@@ -76,24 +85,24 @@ class LicenseService {
         // Fallback for Motherboard via WMIC
         if (motherboard == "UNKNOWN_BOARD") {
           try {
-            final wmicMb = await Process.run('wmic', ['baseboard', 'get', 'serialnumber']);
-            final lines = wmicMb.stdout.toString().split('\n');
+            final wmicMb = await runWithTimeout('wmic', ['baseboard', 'get', 'serialnumber']);
+            final lines = (wmicMb?.stdout.toString() ?? '').split('\n');
             if (lines.length > 1 && lines[1].trim().isNotEmpty) {
               motherboard = lines[1].trim().toUpperCase();
             }
           } catch (_) {}
         }
 
-        // 2. Get Disk Serial Number via PowerShell
+        // 2. Get Disk Serial Number via PowerShell (2-second timeout)
         try {
-          final diskResult = await Process.run('powershell', [
+          final diskResult = await runWithTimeout('powershell', [
             '-NoProfile',
             '-ExecutionPolicy',
             'Bypass',
             '-Command',
             '(Get-CimInstance Win32_DiskDrive | Select-Object -First 1).SerialNumber',
           ]);
-          final out = diskResult.stdout.toString().trim();
+          final out = diskResult?.stdout.toString().trim() ?? '';
           if (out.isNotEmpty && out.toLowerCase() != 'null') {
             disk = out.toUpperCase();
           }
@@ -102,8 +111,8 @@ class LicenseService {
         // Fallback for Disk via WMIC
         if (disk == "UNKNOWN_DISK") {
           try {
-            final wmicDisk = await Process.run('wmic', ['diskdrive', 'get', 'serialnumber']);
-            final lines = wmicDisk.stdout.toString().split('\n');
+            final wmicDisk = await runWithTimeout('wmic', ['diskdrive', 'get', 'serialnumber']);
+            final lines = (wmicDisk?.stdout.toString() ?? '').split('\n');
             if (lines.length > 1 && lines[1].trim().isNotEmpty) {
               disk = lines[1].trim().toUpperCase();
             }
@@ -113,13 +122,13 @@ class LicenseService {
         // 3. Additional fallback: MachineGuid from Windows Registry
         if (motherboard == "UNKNOWN_BOARD" && disk == "UNKNOWN_DISK") {
           try {
-            final regResult = await Process.run('reg', [
+            final regResult = await runWithTimeout('reg', [
               'query',
               r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography',
               '/v',
               'MachineGuid',
             ]);
-            final match = RegExp(r'MachineGuid\s+REG_SZ\s+([a-zA-Z0-9\-]+)').firstMatch(regResult.stdout.toString());
+            final match = RegExp(r'MachineGuid\s+REG_SZ\s+([a-zA-Z0-9\-]+)').firstMatch(regResult?.stdout.toString() ?? '');
             if (match != null) {
               motherboard = "WIN_REG";
               disk = match.group(1) ?? "WIN_DEFAULT";
