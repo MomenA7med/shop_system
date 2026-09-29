@@ -104,11 +104,11 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
           ? _defaultMinAlertController.text.trim()
           : '2';
       _variants.add(_VariantEntry(
-        size: 'M',
-        color: 'أسود',
-        cost: '100',
-        price: '180',
-        stock: '10',
+        size: 'قطعة',
+        color: '-',
+        cost: '10',
+        price: '15',
+        stock: '20',
         minAlert: alertVal,
       ));
     });
@@ -369,7 +369,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'مصفوفة المتغيرات (المقاسات والألوان والأسعار وحد التنبيه والباركود)',
+                    'متغيرات الصنف والوحدات والأسعار والأرصدة والباركود',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.primaryLight),
                   ),
                   ElevatedButton.icon(
@@ -380,7 +380,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('إضافة مقاس/لون', style: TextStyle(fontSize: 12)),
+                    label: const Text('إضافة متغير / وحدة', style: TextStyle(fontSize: 12)),
                     onPressed: _addVariantRow,
                   ),
                 ],
@@ -397,11 +397,11 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                 ),
                 child: Row(
                   children: [
-                    Expanded(flex: 2, child: Text('المقاس (Size)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
+                    Expanded(flex: 2, child: Text('الوحدة (Unit)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 8),
-                    Expanded(flex: 2, child: Text('اللون (Color)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
+                    Expanded(flex: 2, child: Text('البيان / الحجم / النكهة', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 8),
-                    Expanded(flex: 2, child: Text('سعر الشراء', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
+                    Expanded(flex: 2, child: Text('سعر التكلفة', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 8),
                     Expanded(flex: 2, child: Text('سعر البيع', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 8),
@@ -409,7 +409,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                     const SizedBox(width: 8),
                     Expanded(flex: 2, child: Text('حد تنبيه النقص', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.primaryLight))),
                     const SizedBox(width: 8),
-                    Expanded(flex: 3, child: Text('الباركود SKU', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
+                    Expanded(flex: 3, child: Text('الباركود (رقم المادة)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.textPrimary))),
                     const SizedBox(width: 40),
                   ],
                 ),
@@ -426,23 +426,23 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                     final v = _variants[index];
                     return Row(
                       children: [
-                        // Size
+                        // Unit / Size
                         Expanded(
                           flex: 2,
                           child: TextFormField(
                             controller: v.sizeCtrl,
-                            decoration: const InputDecoration(hintText: 'M, L, 32...'),
+                            decoration: const InputDecoration(hintText: 'قطعة، علبة، كرتونة...'),
                             validator: (val) => val!.isEmpty ? 'مطلوب' : null,
                           ),
                         ),
                         const SizedBox(width: 8),
 
-                        // Color
+                        // Variant note / Flavor / Volume
                         Expanded(
                           flex: 2,
                           child: TextFormField(
                             controller: v.colorCtrl,
-                            decoration: const InputDecoration(hintText: 'أسود, أبيض...'),
+                            decoration: const InputDecoration(hintText: '240 مل، سادة...'),
                             validator: (val) => val!.isEmpty ? 'مطلوب' : null,
                           ),
                         ),

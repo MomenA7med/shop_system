@@ -41,12 +41,12 @@ class StoreSettingsModel {
   factory StoreSettingsModel.fromMap(Map<String, dynamic> map) {
     return StoreSettingsModel(
       id: map['id'] as int? ?? 1,
-      storeName: map['store_name'] as String? ?? 'محل الأزياء والأناقة',
-      slogan: map['slogan'] as String? ?? 'أحدث صيحات الملابس والموضة',
+      storeName: map['store_name'] as String? ?? 'سوبر ماركت الأمانة',
+      slogan: map['slogan'] as String? ?? 'أجود المواد الغذائية والمنتجات الاستهلاكية',
       phone: map['phone'] as String? ?? '01000000000',
       address: map['address'] as String? ?? 'الشارع الرئيسي - وسط البلد',
       currencySymbol: map['currency_symbol'] as String? ?? 'ج.م',
-      receiptFooter: map['receipt_footer'] as String? ?? 'شكراً لزيارتكم! البضاعة المباعة ترد وتستبدل خلال 14 يوماً مع الفاتورة',
+      receiptFooter: map['receipt_footer'] as String? ?? 'شكراً لزيارتكم! يرجى مراجعة الأصناف والفاتورة قبل المغادرة',
       taxRatePercent: (map['tax_rate_percent'] as num?)?.toDouble() ?? 0.0,
       themeMode: map['theme_mode'] as String? ?? 'dark',
       logoPath: map['logo_path'] as String?,

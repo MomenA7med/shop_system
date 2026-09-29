@@ -1,12 +1,12 @@
 class AppStrings {
   // App General
-  static const String appName = 'نظام إدارة ونقاط بيع محل الملابس';
-  static const String appShortName = 'كاشير الملابس';
+  static const String appName = 'نظام إدارة ونقاط بيع السوبر ماركت';
+  static const String appShortName = 'كاشير السوبر ماركت';
 
   // Navigation
   static const String navPOS = 'نقطة البيع (الكاشير)';
   static const String navInvoices = 'الفواتير المباعة';
-  static const String navInventory = 'المخزون والمتغيرات';
+  static const String navInventory = 'المخزون والأصناف';
   static const String navReturns = 'المرتجعات والتبديل';
   static const String navShifts = 'إدارة الورديات';
   static const String navReports = 'التقارير والأرباح';
@@ -14,37 +14,37 @@ class AppStrings {
   static const String navLogout = 'تسجيل الخروج';
 
   // POS
-  static const String searchProductOrBarcode = 'البحث عن منتج (الاسم أو الباركود)...';
-  static const String allCategories = 'الكل';
+  static const String searchProductOrBarcode = 'امسح الباركود أو ابحث عن صنف...';
+  static const String allCategories = 'جميع الأقسام';
   static const String currentOrder = 'الفاتورة الحالية';
-  static const String emptyCart = 'السلة فارغة، اختر منتجاً أو امسح الباركود';
+  static const String emptyCart = 'الفاتورة فارغة، امسح الباركود أو اختر صنفاً للبدء';
   static const String subtotal = 'المجموع الفرعي';
   static const String tax = 'الضريبة';
   static const String grandTotal = 'الإجمالي المطلوب';
   static const String cashReceived = 'المبلغ المستلم نقداً';
   static const String changeDue = 'الباقي للعميل';
   static const String confirmPayment = 'تأكيد الدفع وطباعة الفاتورة';
-  static const String saveAndPrint = 'حفظ وطباعة';
-  static const String saveWithoutPrint = 'حفظ بدون طباعة';
+  static const String saveAndPrint = 'حفظ وطباعة (F12)';
+  static const String saveWithoutPrint = 'حفظ بدون طباعة (F10)';
   static const String exactAmount = 'المبلغ بالكامل';
   static const String clearCart = 'إلغاء الفاتورة';
   static const String invoicePreview = 'معاينة الفاتورة';
-  static const String selectVariant = 'اختر المقاس واللون';
+  static const String selectVariant = 'اختر الوحدة / العبوة';
   static const String outOfStock = 'غير متوفر بالمخزون!';
 
   // Inventory
-  static const String productsList = 'قائمة المنتجات والمتغيرات';
-  static const String addNewProduct = 'إضافة منتج جديد';
-  static const String editProduct = 'تعديل المنتج';
-  static const String productName = 'اسم المنتج / الموديل';
-  static const String category = 'التصنيف';
-  static const String availableSizes = 'المقاسات المتوفرة';
-  static const String availableColors = 'الألوان';
-  static const String skuBarcode = 'رمز الباركود SKU';
-  static const String costPrice = 'سعر الشراء (التكلفة)';
-  static const String sellingPrice = 'سعر البيع';
-  static const String stockQuantity = 'الكمية بالمخزون';
-  static const String minStockAlert = 'حد تنبيه النقص';
+  static const String productsList = 'قائمة الأصناف والمنتجات';
+  static const String addNewProduct = 'إضافة صنف جديد';
+  static const String editProduct = 'تعديل الصنف';
+  static const String productName = 'اسم الصنف / المادة';
+  static const String category = 'القسم / التصنيف';
+  static const String availableSizes = 'الوحدات / العبوات';
+  static const String availableColors = 'البيان / الحجم / النكهة';
+  static const String skuBarcode = 'رمز الباركود (رقم المادة)';
+  static const String costPrice = 'سعر التكلفة (سعر الجملة)';
+  static const String sellingPrice = 'سعر البيع (الإفرادي)';
+  static const String stockQuantity = 'الكمية الحالية بالمخزون';
+  static const String minStockAlert = 'حد تنبيه نقص الكمية';
   static const String stockStatus = 'حالة المخزون';
   static const String inStock = 'متوفر';
   static const String lowStock = 'منخفض';

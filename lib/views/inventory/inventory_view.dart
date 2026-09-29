@@ -11,6 +11,7 @@ import '../../providers/settings_provider.dart';
 import 'barcode_print_dialog.dart';
 import 'categories_management_dialog.dart';
 import 'product_form_dialog.dart';
+import 'widgets/import_excel_dialog.dart';
 
 class InventoryView extends StatefulWidget {
   const InventoryView({super.key});
@@ -276,6 +277,15 @@ class _InventoryViewState extends State<InventoryView> {
                             : const Icon(Icons.print_outlined, size: 18),
                         label: const Text('طباعة الجرد'),
                         onPressed: _isPrinting ? null : _onPrintInventory,
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal.shade700,
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.file_download_outlined, size: 18),
+                        label: const Text('استيراد Excel/CSV'),
+                        onPressed: () => ImportExcelDialog.show(context),
                       ),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.category_rounded, size: 18),

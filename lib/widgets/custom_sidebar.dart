@@ -104,7 +104,7 @@ class CustomSidebar extends StatelessWidget {
                           ),
                         )
                       : const Icon(
-                          Icons.checkroom_rounded,
+                          Icons.shopping_cart_rounded,
                           color: Colors.white,
                           size: 22,
                         ),
@@ -117,7 +117,7 @@ class CustomSidebar extends StatelessWidget {
                       Text(
                         settings.storeName.isNotEmpty
                             ? settings.storeName
-                            : 'كاشير الأزياء',
+                            : 'كاشير السوبر ماركت',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -129,7 +129,7 @@ class CustomSidebar extends StatelessWidget {
                       Text(
                         settings.slogan.isNotEmpty
                             ? settings.slogan
-                            : 'نظام إدارة ونقاط البيع',
+                            : 'نظام إدارة ونقاط بيع السوبر ماركت',
                         style: TextStyle(fontSize: 10, color: colors.textMuted),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
