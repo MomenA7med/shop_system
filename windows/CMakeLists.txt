@@ -87,8 +87,11 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
-# Automatically bundle any custom DLLs placed in windows/libs (e.g., d3dcompiler_47.dll, vcruntime140.dll, sqlite3.dll)
-file(GLOB EXTRA_BUNDLED_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/libs/*.dll")
+# Automatically bundle any custom DLLs placed in windows/libs or windows/ (e.g., sqlite3.dll, d3dcompiler_47.dll, vcruntime140.dll)
+file(GLOB EXTRA_BUNDLED_LIBS 
+  "${CMAKE_CURRENT_SOURCE_DIR}/libs/*.dll"
+  "${CMAKE_CURRENT_SOURCE_DIR}/*.dll"
+)
 if(EXTRA_BUNDLED_LIBS)
   install(FILES ${EXTRA_BUNDLED_LIBS}
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
