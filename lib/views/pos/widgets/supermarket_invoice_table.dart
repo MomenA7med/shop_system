@@ -4,7 +4,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/number_parser.dart';
 import '../../../models/product_model.dart';
-import '../../../models/product_variant_model.dart';
 import '../../../providers/pos_provider.dart';
 
 class SupermarketInvoiceTable extends StatefulWidget {
@@ -84,26 +83,78 @@ class _SupermarketInvoiceTableState extends State<SupermarketInvoiceTable> {
     }
   }
 
-  void _addQuickItem(String name, double price, String unit, String barcode) async {
-    final pos = context.read<POSProvider>();
-    // Try to find if exists in products, otherwise create standard cart item
-    final found = await pos.scanBarcode(barcode);
-    if (!found) {
-      // Create ad-hoc variant & product
-      final product = ProductModel(id: 999900 + barcode.hashCode.abs() % 1000, categoryId: 1, name: name);
-      final variant = ProductVariantModel(
-        id: 999900 + barcode.hashCode.abs() % 1000,
-        productId: product.id!,
-        skuBarcode: barcode,
-        size: unit,
-        color: '-',
-        costPrice: price * 0.75,
-        sellingPrice: price,
-        stockQuantity: 999,
-      );
-      pos.addVariantToCart(product, variant);
+  void _onQuickProductTapped(ProductModel prod, POSProvider pos) {
+    if (prod.variants.isEmpty) return;
+    if (prod.variants.length == 1) {
+      pos.addVariantToCart(prod, prod.variants.first);
+      _searchFocus.requestFocus();
+    } else {
+      _showQuickVariantPicker(prod, pos);
     }
-    _searchFocus.requestFocus();
+  }
+
+  void _showQuickVariantPicker(ProductModel prod, POSProvider pos) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: Row(
+            children: [
+              const Icon(Icons.flash_on_rounded, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                prod.name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'اختر الوحدة أو المتغير المطلوب إضافته للفاتورة:',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: prod.variants.map((v) {
+                  final hasDesc = v.color.isNotEmpty &&
+                      v.color != '-' &&
+                      v.color != 'افتراضي';
+                  final label = hasDesc ? '${v.size} (${v.color})' : v.size;
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    onPressed: () {
+                      pos.addVariantToCart(prod, v);
+                      Navigator.of(ctx).pop();
+                      _searchFocus.requestFocus();
+                    },
+                    child: Text('$label - ${v.sellingPrice.toStringAsFixed(0)}ج'),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -217,23 +268,89 @@ class _SupermarketInvoiceTableState extends State<SupermarketInvoiceTable> {
                 ],
               ),
 
-              // Quick Chips (Bread, Bags, Water, Eggs, Soda)
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Text('أصناف سريعة: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(width: 4),
-                  _buildQuickChip('🍞 عيش بلدي', 5.0, 'رغيف', '999001'),
-                  const SizedBox(width: 6),
-                  _buildQuickChip('🛍️ كيس بلاستيك', 1.0, 'قطعة', '999002'),
-                  const SizedBox(width: 6),
-                  _buildQuickChip('💧 مياه معدنية', 7.0, 'زجاجة', '999003'),
-                  const SizedBox(width: 6),
-                  _buildQuickChip('🥚 بيض', 6.0, 'بيضة', '999004'),
-                  const SizedBox(width: 6),
-                  _buildQuickChip('🥤 كانز بيبسي', 15.0, 'كانز', '999005'),
-                ],
-              ),
+              // Dynamic User-Configured Quick Items (Shown only if configured)
+              if (pos.quickProducts.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.flash_on_rounded, size: 14, color: Colors.amber),
+                        SizedBox(width: 2),
+                        Text(
+                          'أصناف سريعة: ',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: pos.quickProducts.map((p) {
+                            final priceLabel = p.variants.isNotEmpty
+                                ? (p.minPrice == p.maxPrice
+                                      ? '${p.minPrice.toStringAsFixed(0)}ج'
+                                      : '${p.minPrice.toStringAsFixed(0)}-${p.maxPrice.toStringAsFixed(0)}ج')
+                                : '';
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(6),
+                                onTap: () => _onQuickProductTapped(p, pos),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colors.cardSurface,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        p.name,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      if (priceLabel.isNotEmpty) ...[
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '($priceLabel)',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -741,24 +858,5 @@ class _SupermarketInvoiceTableState extends State<SupermarketInvoiceTable> {
       return SizedBox(width: width, child: text);
     }
     return Expanded(flex: flex ?? 1, child: text);
-  }
-
-  Widget _buildQuickChip(String label, double price, String unit, String code) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(6),
-      onTap: () => _addQuickItem(label.replaceAll(RegExp(r'^[^\s]+\s'), ''), price, unit, code),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: context.colors.surface,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: context.colors.border),
-        ),
-        child: Text(
-          '$label (${price.toStringAsFixed(0)}ج)',
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
   }
 }

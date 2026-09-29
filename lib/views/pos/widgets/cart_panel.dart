@@ -254,204 +254,128 @@ class _CartPanelState extends State<CartPanel> {
               ],
             ),
           ),
-          Divider(color: colors.border, height: 1),
-
-          // 2. Cart Items List (Spacious & Clean Layout)
+          // 2. Checkout Dashboard & Payment Cockpit
           Expanded(
-            child: cartItems.isEmpty
-                ? Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Grand Total Hero Card
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colors.primary.withValues(alpha: 0.15),
+                          colors.primary.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colors.primary.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                    ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.shopping_cart_outlined,
-                          size: 54,
-                          color: colors.textMuted.withValues(alpha: 0.35),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              AppStrings.grandTotal,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                            if (pos.discount > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colors.warning.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'خصم: ${CurrencyFormatter.format(pos.discount, symbol: settings.currencySymbol)}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: colors.warning,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                        const SizedBox(height: 8),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
                           child: Text(
-                            AppStrings.emptyCart,
-                            textAlign: TextAlign.center,
+                            CurrencyFormatter.format(
+                              pos.grandTotal,
+                              symbol: settings.currencySymbol,
+                            ),
                             style: TextStyle(
-                              color: colors.textMuted,
-                              fontSize: 13,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: colors.isDark
+                                  ? colors.primaryLight
+                                  : colors.primaryDark,
                             ),
                           ),
                         ),
+                        if (pos.discount > 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'المجموع قبل الخصم: ${CurrencyFormatter.format(pos.subtotal, symbol: settings.currencySymbol)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.textMuted,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: cartItems.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = cartItems[index];
-
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: colors.cardSurface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Top Line: Product Name + Top "X" Delete Icon
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    item.productName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: colors.textPrimary,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: () => pos.removeItem(index),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      color: colors.error.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 15,
-                                      color: colors.error,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            // Bottom Line: Specs/Price (Right) | Quantity Controls (Center) | Total (Left)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Specs badge & unit price
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: colors.surfaceLight,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '${item.size} | ${item.color}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: colors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      CurrencyFormatter.format(
-                                        item.unitPrice,
-                                        symbol: settings.currencySymbol,
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colors.textMuted,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                // Quantity Controls
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                        size: 20,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
-                                      ),
-                                      color: colors.textSecondary,
-                                      onPressed: () =>
-                                          pos.decrementQuantity(index),
-                                    ),
-                                    Container(
-                                      constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                      ),
-                                      alignment: Alignment.center,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                      ),
-                                      child: Text(
-                                        '${item.quantity}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: colors.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add_circle_outline,
-                                        size: 20,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
-                                      ),
-                                      color: colors.primary,
-                                      onPressed: () =>
-                                          pos.incrementQuantity(index),
-                                    ),
-                                  ],
-                                ),
-
-                                // Total Item Price
-                                Text(
-                                  CurrencyFormatter.format(
-                                    item.totalPrice,
-                                    symbol: settings.currencySymbol,
-                                  ),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: colors.isDark
-                                        ? colors.primaryLight
-                                        : colors.primaryDark,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Quick Cash Addition Chips
+                  if (cartItems.isNotEmpty) ...[
+                    Text(
+                      'إضافة سريعة للمبلغ المستلم:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _buildQuickCashChip('+5 ج', 5, pos),
+                        _buildQuickCashChip('+10 ج', 10, pos),
+                        _buildQuickCashChip('+20 ج', 20, pos),
+                        _buildQuickCashChip('+50 ج', 50, pos),
+                        _buildQuickCashChip('+100 ج', 100, pos),
+                        _buildQuickCashChip('+200 ج', 200, pos),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ],
+              ),
+            ),
           ),
 
           Divider(color: colors.border, height: 1),
@@ -946,6 +870,37 @@ class _CartPanelState extends State<CartPanel> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickCashChip(String label, double amount, POSProvider pos) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        final current = pos.amountPaid;
+        final next = current + amount;
+        pos.setAmountPaid(next);
+        _lastAmountPaid = next;
+        _paidCtrl.text = next % 1 == 0
+            ? next.toInt().toString()
+            : next.toStringAsFixed(2);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: context.colors.cardSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: context.colors.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: context.colors.primaryLight,
+          ),
+        ),
       ),
     );
   }

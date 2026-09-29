@@ -47,8 +47,19 @@ class DatabaseHelper {
 
     await _ensureSettingsColumnsExist(db);
     await _ensureLicenseTableExists(db);
+    await _ensureProductsQuickItemColumnExists(db);
     await _cleanupOrphanedProducts(db);
     return db;
+  }
+
+  Future<void> _ensureProductsQuickItemColumnExists(Database db) async {
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(products)');
+      final hasCol = info.any((col) => col['name'] == 'is_quick_item');
+      if (!hasCol) {
+        await db.execute('ALTER TABLE products ADD COLUMN is_quick_item INTEGER DEFAULT 0');
+      }
+    } catch (_) {}
   }
 
   Future<void> _cleanupOrphanedProducts(Database db) async {
@@ -155,6 +166,7 @@ class DatabaseHelper {
         category_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
+        is_quick_item INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
       )
@@ -467,6 +479,7 @@ class DatabaseHelper {
         'category_id': product.categoryId,
         'name': product.name,
         'description': product.description,
+        'is_quick_item': product.isQuickItem ? 1 : 0,
         'created_at': DateTime.now().toIso8601String(),
       });
 
@@ -496,6 +509,7 @@ class DatabaseHelper {
           'category_id': product.categoryId,
           'name': product.name,
           'description': product.description,
+          'is_quick_item': product.isQuickItem ? 1 : 0,
         },
         where: 'id = ?',
         whereArgs: [product.id],

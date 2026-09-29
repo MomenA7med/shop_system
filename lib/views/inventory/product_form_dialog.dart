@@ -68,6 +68,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       TextEditingController(text: '2');
   int? _selectedCategoryId;
   final List<_VariantEntry> _variants = [];
+  bool _isQuickItem = false;
   bool _isSaving = false;
 
   @override
@@ -78,6 +79,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       _nameController.text = p.name;
       _descController.text = p.description;
       _selectedCategoryId = p.categoryId;
+      _isQuickItem = p.isQuickItem;
 
       if (p.variants.isNotEmpty) {
         _defaultMinAlertController.text = p.variants.first.minStockAlert
@@ -201,6 +203,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
         categoryId: _selectedCategoryId!,
         name: _nameController.text.trim(),
         description: _descController.text.trim(),
+        isQuickItem: _isQuickItem,
       );
 
       final variantsList = _variants.map((v) {
@@ -443,17 +446,64 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
 
               const SizedBox(height: 12),
 
-              // Variants Section Header
+              // Variants Section Header & Quick Item Toggle
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'متغيرات الصنف والوحدات والأسعار والأرصدة والباركود',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: colors.primaryLight,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        'متغيرات الصنف والوحدات والأسعار والأرصدة والباركود',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: colors.primaryLight,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Quick item toggle chip
+                      InkWell(
+                        onTap: () => setState(() => _isQuickItem = !_isQuickItem),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _isQuickItem
+                                ? AppColors.primary.withValues(alpha: 0.15)
+                                : colors.cardSurface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _isQuickItem ? AppColors.primary : colors.border,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _isQuickItem ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                                size: 16,
+                                color: _isQuickItem ? AppColors.primary : colors.textMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'صنف سريع في الكاشير',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isQuickItem ? AppColors.primary : colors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Checkbox(
+                                value: _isQuickItem,
+                                onChanged: (val) => setState(() => _isQuickItem = val ?? false),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(

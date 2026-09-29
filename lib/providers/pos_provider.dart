@@ -20,6 +20,8 @@ class POSProvider with ChangeNotifier {
   String? _statusMessage;
 
   List<ProductModel> get products => _products;
+  List<ProductModel> get quickProducts =>
+      _products.where((p) => p.isQuickItem).toList();
   List<CategoryModel> get categories => _categories;
   List<OrderItemModel> get cartItems => _cartItems;
   int? get selectedCategoryId => _selectedCategoryId;

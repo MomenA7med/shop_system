@@ -6,6 +6,7 @@ class ProductModel {
   final String? categoryName;
   final String name;
   final String description;
+  final bool isQuickItem;
   final DateTime createdAt;
   final List<ProductVariantModel> variants;
 
@@ -15,6 +16,7 @@ class ProductModel {
     this.categoryName,
     required this.name,
     this.description = '',
+    this.isQuickItem = false,
     DateTime? createdAt,
     this.variants = const [],
   }) : createdAt = createdAt ?? DateTime.now();
@@ -36,6 +38,7 @@ class ProductModel {
       'category_id': categoryId,
       'name': name,
       'description': description,
+      'is_quick_item': isQuickItem ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -47,6 +50,7 @@ class ProductModel {
       categoryName: categoryName ?? map['category_name'] as String?,
       name: map['name'] as String,
       description: map['description'] as String? ?? '',
+      isQuickItem: map['is_quick_item'] == 1 || map['is_quick_item'] == true,
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
       variants: variants ?? [],
     );
@@ -58,6 +62,7 @@ class ProductModel {
     String? categoryName,
     String? name,
     String? description,
+    bool? isQuickItem,
     DateTime? createdAt,
     List<ProductVariantModel>? variants,
   }) {
@@ -67,6 +72,7 @@ class ProductModel {
       categoryName: categoryName ?? this.categoryName,
       name: name ?? this.name,
       description: description ?? this.description,
+      isQuickItem: isQuickItem ?? this.isQuickItem,
       createdAt: createdAt ?? this.createdAt,
       variants: variants ?? this.variants,
     );
