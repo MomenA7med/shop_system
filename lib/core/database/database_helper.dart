@@ -48,6 +48,7 @@ class DatabaseHelper {
     await _ensureSettingsColumnsExist(db);
     await _ensureLicenseTableExists(db);
     await _ensureProductsQuickItemColumnExists(db);
+    await _ensureOrdersDeliveryFeeColumnExists(db);
     await _cleanupOrphanedProducts(db);
     return db;
   }
@@ -58,6 +59,16 @@ class DatabaseHelper {
       final hasCol = info.any((col) => col['name'] == 'is_quick_item');
       if (!hasCol) {
         await db.execute('ALTER TABLE products ADD COLUMN is_quick_item INTEGER DEFAULT 0');
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _ensureOrdersDeliveryFeeColumnExists(Database db) async {
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(orders)');
+      final hasCol = info.any((col) => col['name'] == 'delivery_fee');
+      if (!hasCol) {
+        await db.execute('ALTER TABLE orders ADD COLUMN delivery_fee REAL DEFAULT 0.0');
       }
     } catch (_) {}
   }
@@ -213,6 +224,7 @@ class DatabaseHelper {
         total_amount REAL NOT NULL,
         amount_paid REAL NOT NULL,
         change_due REAL NOT NULL,
+        delivery_fee REAL DEFAULT 0.0,
         payment_method TEXT DEFAULT 'cash',
         status TEXT DEFAULT 'completed',
         created_at TEXT NOT NULL,
@@ -596,6 +608,7 @@ class DatabaseHelper {
     required double totalAmount,
     required double amountPaid,
     required double changeDue,
+    double deliveryFee = 0.0,
     required List<OrderItemModel> items,
   }) async {
     final db = await database;
@@ -611,6 +624,7 @@ class DatabaseHelper {
         'total_amount': totalAmount,
         'amount_paid': amountPaid,
         'change_due': changeDue,
+        'delivery_fee': deliveryFee,
         'payment_method': 'cash',
         'status': 'completed',
         'created_at': now.toIso8601String(),
@@ -673,6 +687,7 @@ class DatabaseHelper {
         totalAmount: totalAmount,
         amountPaid: amountPaid,
         changeDue: changeDue,
+        deliveryFee: deliveryFee,
         status: 'completed',
         createdAt: now,
         items: savedItems,

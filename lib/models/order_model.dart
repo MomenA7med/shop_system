@@ -9,6 +9,7 @@ class OrderModel {
   final double totalAmount;
   final double amountPaid;
   final double changeDue;
+  final double deliveryFee;
   final String paymentMethod; // 'cash'
   final String status; // 'completed' | 'refunded' | 'partially_refunded'
   final DateTime createdAt;
@@ -23,6 +24,7 @@ class OrderModel {
     required this.totalAmount,
     required this.amountPaid,
     required this.changeDue,
+    this.deliveryFee = 0.0,
     this.paymentMethod = 'cash',
     this.status = 'completed',
     DateTime? createdAt,
@@ -43,7 +45,7 @@ class OrderModel {
   double get netItemsSubtotal => items.fold(0.0, (sum, item) => sum + item.netTotalPrice);
   double get refundedAmount => items.fold(0.0, (sum, item) => sum + item.refundedAmount);
   double get netTotalAmount => (totalAmount - refundedAmount).clamp(0.0, double.infinity);
-  double get discountAmount => itemsSubtotal > totalAmount ? (itemsSubtotal - totalAmount) : 0.0;
+  double get discountAmount => (itemsSubtotal + deliveryFee > totalAmount) ? (itemsSubtotal + deliveryFee - totalAmount) : 0.0;
   bool get hasReturns => totalReturnedCount > 0 || status == 'refunded' || status == 'partially_refunded';
   bool get isFullyRefunded => status == 'refunded' || (remainingPieces == 0 && totalPieces > 0);
   bool get isPartiallyRefunded => status == 'partially_refunded' || (hasReturns && !isFullyRefunded);
@@ -57,6 +59,7 @@ class OrderModel {
       'total_amount': totalAmount,
       'amount_paid': amountPaid,
       'change_due': changeDue,
+      'delivery_fee': deliveryFee,
       'payment_method': paymentMethod,
       'status': status,
       'created_at': createdAt.toIso8601String(),
@@ -73,6 +76,7 @@ class OrderModel {
       totalAmount: (map['total_amount'] as num).toDouble(),
       amountPaid: (map['amount_paid'] as num).toDouble(),
       changeDue: (map['change_due'] as num).toDouble(),
+      deliveryFee: (map['delivery_fee'] as num?)?.toDouble() ?? 0.0,
       paymentMethod: map['payment_method'] as String? ?? 'cash',
       status: map['status'] as String? ?? 'completed',
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
@@ -89,6 +93,7 @@ class OrderModel {
     double? totalAmount,
     double? amountPaid,
     double? changeDue,
+    double? deliveryFee,
     String? paymentMethod,
     String? status,
     DateTime? createdAt,
@@ -103,6 +108,7 @@ class OrderModel {
       totalAmount: totalAmount ?? this.totalAmount,
       amountPaid: amountPaid ?? this.amountPaid,
       changeDue: changeDue ?? this.changeDue,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,

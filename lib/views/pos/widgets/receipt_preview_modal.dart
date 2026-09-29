@@ -298,16 +298,30 @@ class _ReceiptPreviewModalState extends State<ReceiptPreviewModal> {
                             final activeItems = order.items.where((i) => i.remainingQuantity > 0).toList();
                             final activeSubtotal = activeItems.fold(0.0, (sum, i) => sum + i.netTotalPrice);
                             final activeTotal = order.netTotalAmount;
-                            final activeDiscount = (activeSubtotal > activeTotal) ? (activeSubtotal - activeTotal) : 0.0;
+                            final activeDiscount = (activeSubtotal + order.deliveryFee > activeTotal)
+                                ? (activeSubtotal + order.deliveryFee - activeTotal)
+                                : 0.0;
 
                             return [
-                              if (activeDiscount > 0) ...[
+                              if (activeDiscount > 0 || order.deliveryFee > 0) ...[
                                 _buildReceiptRow(
                                   'المجموع الفرعي:',
                                   CurrencyFormatter.format(activeSubtotal, symbol: settings.currencySymbol),
                                   fontSize: 10,
                                 ),
                                 const SizedBox(height: 3),
+                              ],
+                              if (order.deliveryFee > 0) ...[
+                                _buildReceiptRow(
+                                  'خدمة التوصيل (+):',
+                                  '+ ${CurrencyFormatter.format(order.deliveryFee, symbol: settings.currencySymbol)}',
+                                  isBold: true,
+                                  textColor: const Color(0xFF0D9488),
+                                  fontSize: 11,
+                                ),
+                                const SizedBox(height: 3),
+                              ],
+                              if (activeDiscount > 0) ...[
                                 _buildReceiptRow(
                                   'الخصم (-):',
                                   '- ${CurrencyFormatter.format(activeDiscount, symbol: settings.currencySymbol)}',

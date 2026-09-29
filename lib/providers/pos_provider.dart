@@ -40,12 +40,15 @@ class POSProvider with ChangeNotifier {
   bool get isQuickFilterOnly => _isQuickFilterOnly;
   String get searchQuery => _searchQuery;
   double get discount => _discount;
+  double get deliveryFee => _deliveryFee;
   double get amountPaid => _amountPaid;
   bool get isLoading => _isLoading;
   String? get statusMessage => _statusMessage;
 
+  double _deliveryFee = 0.0;
+
   double get subtotal => _cartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
-  double get grandTotal => (subtotal - _discount) > 0 ? (subtotal - _discount) : 0.0;
+  double get grandTotal => (subtotal - _discount + _deliveryFee) > 0 ? (subtotal - _discount + _deliveryFee) : 0.0;
   double get changeDue => (_cartItems.isNotEmpty && _amountPaid > grandTotal) ? _amountPaid - grandTotal : 0.0;
   bool get canCheckout => _cartItems.isNotEmpty && _amountPaid >= grandTotal && grandTotal > 0;
 
@@ -215,8 +218,22 @@ class POSProvider with ChangeNotifier {
   void clearCart() {
     _cartItems.clear();
     _discount = 0.0;
+    _deliveryFee = 0.0;
     _amountPaid = 0.0;
     _statusMessage = null;
+    notifyListeners();
+  }
+
+  void setDeliveryFee(double amount) {
+    if (_cartItems.isEmpty) {
+      _deliveryFee = 0.0;
+      _amountPaid = 0.0;
+    } else {
+      _deliveryFee = amount < 0 ? 0.0 : amount;
+      if (_amountPaid < grandTotal) {
+        _amountPaid = grandTotal;
+      }
+    }
     notifyListeners();
   }
 
@@ -283,6 +300,7 @@ class POSProvider with ChangeNotifier {
         totalAmount: grandTotal,
         amountPaid: _amountPaid,
         changeDue: changeDue,
+        deliveryFee: _deliveryFee,
         items: List.from(_cartItems),
       );
 

@@ -29,8 +29,11 @@ class _CartPanelState extends State<CartPanel> {
   final FocusNode _paidFocusNode = FocusNode();
   final TextEditingController _discountCtrl = TextEditingController();
   final FocusNode _discountFocusNode = FocusNode();
+  final TextEditingController _deliveryCtrl = TextEditingController();
+  final FocusNode _deliveryFocusNode = FocusNode();
   double _lastAmountPaid = -1.0;
   double _lastDiscount = -1.0;
+  double _lastDeliveryFee = -1.0;
 
   @override
   void dispose() {
@@ -38,6 +41,8 @@ class _CartPanelState extends State<CartPanel> {
     _paidFocusNode.dispose();
     _discountCtrl.dispose();
     _discountFocusNode.dispose();
+    _deliveryCtrl.dispose();
+    _deliveryFocusNode.dispose();
     super.dispose();
   }
 
@@ -49,9 +54,28 @@ class _CartPanelState extends State<CartPanel> {
       if (_discountCtrl.text.isNotEmpty) {
         _discountCtrl.clear();
       }
+      if (_deliveryCtrl.text.isNotEmpty) {
+        _deliveryCtrl.clear();
+      }
       _lastAmountPaid = 0.0;
       _lastDiscount = 0.0;
+      _lastDeliveryFee = 0.0;
       return;
+    }
+
+    // Sync delivery fee input only if not currently focused by user
+    if (!_deliveryFocusNode.hasFocus) {
+      if (_lastDeliveryFee != pos.deliveryFee) {
+        _lastDeliveryFee = pos.deliveryFee;
+        final formatted = pos.deliveryFee > 0
+            ? (pos.deliveryFee % 1 == 0
+                  ? pos.deliveryFee.toInt().toString()
+                  : pos.deliveryFee.toStringAsFixed(2))
+            : '';
+        if (_deliveryCtrl.text != formatted) {
+          _deliveryCtrl.text = formatted;
+        }
+      }
     }
 
     // Sync discount input only if not currently focused by user
@@ -482,6 +506,7 @@ class _CartPanelState extends State<CartPanel> {
                       pos.clearCart();
                       _paidCtrl.clear();
                       _discountCtrl.clear();
+                      _deliveryCtrl.clear();
                     },
                   ),
               ],
@@ -729,17 +754,15 @@ class _CartPanelState extends State<CartPanel> {
 
           Divider(color: colors.border, height: 1),
 
-          // 3. Payment & Totals Section with Discount & Side-by-Side Cash Input
+          // 3. Payment & Totals Section with Delivery, Discount & Side-by-Side Cash Input
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: colors.surface),
             child: Column(
               children: [
-                // Subtotal row (if discount is applied)
-                Visibility(
-                  key: const ValueKey('subtotal_section'),
-                  visible: pos.discount > 0,
-                  child: Padding(
+                // Subtotal & Breakdown row (if discount or delivery is applied)
+                if (pos.discount > 0 || pos.deliveryFee > 0) ...[
+                  Padding(
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -759,13 +782,13 @@ class _CartPanelState extends State<CartPanel> {
                           style: TextStyle(
                             fontSize: 13,
                             color: colors.textSecondary,
-                            decoration: TextDecoration.lineThrough,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
+                ],
 
                 // Grand Total Row
                 Row(
@@ -815,7 +838,116 @@ class _CartPanelState extends State<CartPanel> {
 
                 const SizedBox(height: 10),
 
-                // 4. Discount Input Row
+                // 4. Delivery Fee Input Row (الدليفري / خدمة التوصيل)
+                Row(
+                  key: const ValueKey('delivery_input_section'),
+                  children: [
+                    SizedBox(
+                      width: 110,
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.delivery_dining_rounded,
+                            size: 19,
+                            color: Color(0xFF0D9488),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'الدليفري:',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 44,
+                        child: TextField(
+                          key: const ValueKey('pos_delivery_text_field'),
+                          controller: _deliveryCtrl,
+                          focusNode: _deliveryFocusNode,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textPrimary,
+                          ),
+                          textAlign: TextAlign.left,
+                          textAlignVertical: TextAlignVertical.center,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            hintText: '0.00',
+                            hintStyle: TextStyle(
+                              color: colors.textMuted,
+                              fontSize: 13,
+                            ),
+                            prefixIcon: Container(
+                              width: 36,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Text(
+                                settings.currencySymbol,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.textMuted,
+                                ),
+                              ),
+                            ),
+                            prefixIconConstraints: const BoxConstraints(
+                              minWidth: 36,
+                              maxWidth: 36,
+                              minHeight: 44,
+                              maxHeight: 44,
+                            ),
+                            suffixIcon: Visibility(
+                              visible: pos.deliveryFee > 0,
+                              maintainSize: true,
+                              maintainAnimation: true,
+                              maintainState: true,
+                              child: IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 30,
+                                  minHeight: 30,
+                                ),
+                                onPressed: () {
+                                  _deliveryCtrl.clear();
+                                  _lastDeliveryFee = 0.0;
+                                  pos.setDeliveryFee(0.0);
+                                },
+                              ),
+                            ),
+                            isDense: false,
+                          ),
+                          onChanged: (val) {
+                            final parsed = NumberParser.tryParseDouble(
+                              val,
+                              0.0,
+                            );
+                            _lastDeliveryFee = parsed;
+                            pos.setDeliveryFee(parsed);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // 5. Discount Input Row (الخصم)
                 Row(
                   key: const ValueKey('discount_input_section'),
                   children: [
@@ -924,7 +1056,7 @@ class _CartPanelState extends State<CartPanel> {
 
                 const SizedBox(height: 8),
 
-                // 5. Cash Received Row
+                // 6. Cash Received Row (المبلغ المستلم)
                 Row(
                   key: const ValueKey('cash_received_section'),
                   children: [
@@ -1074,7 +1206,7 @@ class _CartPanelState extends State<CartPanel> {
 
                 const SizedBox(height: 8),
 
-                // 6. Change Due / Remaining Box
+                // 7. Change Due / Remaining Box
                 Container(
                   height: 42,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1146,7 +1278,7 @@ class _CartPanelState extends State<CartPanel> {
 
                 const SizedBox(height: 12),
 
-                // 7. Dual Action Buttons: Save & Print vs Save Without Printing
+                // 8. Dual Action Buttons: Save & Print vs Save Without Printing
                 Row(
                   children: [
                     // Button 1: Save & Print

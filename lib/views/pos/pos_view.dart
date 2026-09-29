@@ -38,7 +38,10 @@ class _POSViewState extends State<POSView> {
                 const BarcodeSearchBar(),
                 // Title Header Bar for Quick Items
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -95,9 +98,7 @@ class _POSViewState extends State<POSView> {
                     ],
                   ),
                 ),
-                const Expanded(
-                  child: ProductCardGrid(),
-                ),
+                const Expanded(child: ProductCardGrid()),
               ],
             ),
           ),

@@ -240,10 +240,12 @@ class PrintService {
                   final activeItems = order.items.where((i) => i.remainingQuantity > 0).toList();
                   final activeSubtotal = activeItems.fold(0.0, (sum, i) => sum + i.netTotalPrice);
                   final activeTotal = order.netTotalAmount;
-                  final activeDiscount = (activeSubtotal > activeTotal) ? (activeSubtotal - activeTotal) : 0.0;
+                  final activeDiscount = (activeSubtotal + order.deliveryFee > activeTotal)
+                      ? (activeSubtotal + order.deliveryFee - activeTotal)
+                      : 0.0;
 
                   return [
-                    if (activeDiscount > 0) ...[
+                    if (activeDiscount > 0 || order.deliveryFee > 0) ...[
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
@@ -261,6 +263,24 @@ class PrintService {
                         ],
                       ),
                       pw.SizedBox(height: 2),
+                    ],
+                    if (order.deliveryFee > 0) ...[
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text(
+                            'خدمة التوصيل (+):',
+                            style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColors.black),
+                          ),
+                          pw.Text(
+                            '+ ${CurrencyFormatter.format(order.deliveryFee, symbol: settings.currencySymbol)}',
+                            style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColors.black),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 2),
+                    ],
+                    if (activeDiscount > 0) ...[
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
