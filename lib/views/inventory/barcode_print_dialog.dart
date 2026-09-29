@@ -136,9 +136,11 @@ class _BarcodePrintDialogState extends State<BarcodePrintDialog> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('المقاس: ${widget.variant.size}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
-                        const SizedBox(width: 8),
-                        Text('اللون: ${widget.variant.color}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
+                        Text('الوحدة: ${widget.variant.size}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
+                        if (widget.variant.color.isNotEmpty && widget.variant.color != 'افتراضي' && widget.variant.color != '-') ...[
+                          const SizedBox(width: 8),
+                          Text('البيان: ${widget.variant.color}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 6),

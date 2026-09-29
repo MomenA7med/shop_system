@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/services/print_service.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/number_parser.dart';
 import '../../models/product_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inventory_provider.dart';
@@ -171,7 +172,7 @@ class _InventoryViewState extends State<InventoryView> {
               ),
               const SizedBox(height: 12),
               Text(
-                'اختر المقاس واللون لفتح نافذة طباعة ملصق الباركود:',
+                'اختر الوحدة / المتغير لفتح نافذة طباعة ملصق الباركود:',
                 style: TextStyle(fontSize: 12, color: colors.textSecondary),
               ),
               const SizedBox(height: 12),
@@ -179,6 +180,9 @@ class _InventoryViewState extends State<InventoryView> {
                 spacing: 8,
                 runSpacing: 8,
                 children: product.variants.map((v) {
+                  final variantLabel = v.color.isNotEmpty && v.color != 'افتراضي' && v.color != '-'
+                      ? '${v.size} - ${v.color}'
+                      : v.size;
                   return ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.cardSurface,
@@ -188,7 +192,7 @@ class _InventoryViewState extends State<InventoryView> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     icon: const Icon(Icons.qr_code, size: 16, color: AppColors.primary),
-                    label: Text('${v.size} - ${v.color} (المخزون: ${v.stockQuantity})', style: const TextStyle(fontSize: 12)),
+                    label: Text('$variantLabel (المخزون: ${NumberParser.formatQuantity(v.stockQuantity)})', style: const TextStyle(fontSize: 12)),
                     onPressed: () {
                       Navigator.of(ctx).pop();
                       showDialog(
@@ -520,7 +524,7 @@ class _InventoryViewState extends State<InventoryView> {
           SizedBox(width: 40, child: Text('#', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
           Expanded(flex: 3, child: Text(AppStrings.productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
           Expanded(flex: 2, child: Text(AppStrings.category, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
-          Expanded(flex: 4, child: Text('المقاسات والألوان المتاحة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
+          Expanded(flex: 4, child: Text('الوحدات والعبوات المتاحة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
           Expanded(flex: 2, child: Text('نطاق السعر', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
           Expanded(flex: 2, child: Text(AppStrings.stockQuantity, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: colors.textPrimary))),
           SizedBox(
@@ -581,8 +585,11 @@ class _InventoryViewState extends State<InventoryView> {
               spacing: 6,
               runSpacing: 4,
               children: product.variants.map((v) {
+                final variantLabel = v.color.isNotEmpty && v.color != 'افتراضي' && v.color != '-'
+                    ? '${v.size} - ${v.color}'
+                    : v.size;
                 return Tooltip(
-                  message: 'اضغط لطباعة باركود (${v.size} - ${v.color})',
+                  message: 'اضغط لطباعة باركود ($variantLabel)',
                   child: InkWell(
                     borderRadius: BorderRadius.circular(4),
                     onTap: () {
@@ -612,7 +619,7 @@ class _InventoryViewState extends State<InventoryView> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '${v.size} - ${v.color} (${v.stockQuantity})',
+                            '$variantLabel (${NumberParser.formatQuantity(v.stockQuantity)})',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,

@@ -65,9 +65,11 @@ class BarcodeService {
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
-                      pw.Text('المقاس: ${variant.size}', style: const pw.TextStyle(fontSize: 7)),
-                      pw.SizedBox(width: 8),
-                      pw.Text('اللون: ${variant.color}', style: const pw.TextStyle(fontSize: 7)),
+                      pw.Text('الوحدة: ${variant.size}', style: const pw.TextStyle(fontSize: 7)),
+                      if (variant.color.isNotEmpty && variant.color != 'افتراضي' && variant.color != '-') ...[
+                        pw.SizedBox(width: 6),
+                        pw.Text('البيان: ${variant.color}', style: const pw.TextStyle(fontSize: 7)),
+                      ],
                     ],
                   ),
 
