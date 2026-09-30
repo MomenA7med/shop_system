@@ -55,10 +55,7 @@ class ProductCardGrid extends StatelessWidget {
                 Text(
                   'تأكد من كتابة اسم الصنف أو الباركود بشكل صحيح، أو امسح البحث للعودة.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: colors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: colors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
@@ -76,10 +73,7 @@ class ProductCardGrid extends StatelessWidget {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text(
                     'مسح البحث والعودة للأصناف السريعة',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () => pos.clearSearch(),
                 ),
@@ -383,7 +377,9 @@ class ProductCardGrid extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? colors.primaryLight : colors.primaryDark,
+                        color: isDark
+                            ? colors.primaryLight
+                            : colors.primaryDark,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -545,7 +541,8 @@ class ProductCardGrid extends StatelessWidget {
                             children: product.variants.map((variant) {
                               final isOutOfStock = variant.stockQuantity <= 0;
                               final isLowStock = variant.isLowStock;
-                              final hasDesc = variant.color.isNotEmpty &&
+                              final hasDesc =
+                                  variant.color.isNotEmpty &&
                                   variant.color != '-' &&
                                   variant.color != 'افتراضي';
 

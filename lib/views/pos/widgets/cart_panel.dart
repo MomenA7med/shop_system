@@ -657,155 +657,210 @@ class _CartPanelState extends State<CartPanel> {
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     itemCount: cartItems.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 5),
                     itemBuilder: (context, index) {
                       final item = cartItems[index];
                       final hasDesc = item.color.isNotEmpty &&
                           item.color != '-' &&
                           item.color != 'افتراضي';
-                      final specLabel = hasDesc ? '${item.size} (${item.color})' : item.size;
+                      final specLabel = hasDesc
+                          ? '${item.size} (${item.color})'
+                          : item.size;
+                      final maxStock = pos.getMaxStock(item);
+                      final isMaxReached = item.quantity >= maxStock;
 
                       return Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: colors.cardSurface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: colors.border),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isMaxReached
+                                ? colors.warning.withValues(alpha: 0.5)
+                                : colors.border.withValues(alpha: 0.8),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Top Line: Product Name + Spec Badge + Top "X" Delete Icon
+                            // Top Row: Product Name + Spec Badge + Line Total Price + Delete Icon
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        item.productName,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: colors.textPrimary,
+                                      Flexible(
+                                        child: Text(
+                                          item.productName,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: colors.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
+                                      if (specLabel.isNotEmpty &&
+                                          specLabel != 'افتراضي' &&
+                                          specLabel != '-') ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 1.5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colors.primary.withValues(
+                                              alpha: 0.1,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: colors.primary.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              specLabel,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: colors.isDark ? colors.primaryLight : colors.primaryDark,
-                                              ),
+                                            borderRadius: BorderRadius.circular(
+                                              3,
                                             ),
                                           ),
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: (item.quantity >= pos.getMaxStock(item))
-                                                  ? colors.warning.withValues(alpha: 0.15)
-                                                  : colors.surfaceLight,
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              'المتاح: ${NumberParser.formatQuantity(pos.getMaxStock(item))}',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: (item.quantity >= pos.getMaxStock(item))
-                                                    ? colors.warning
-                                                    : colors.textMuted,
-                                              ),
+                                          child: Text(
+                                            specLabel,
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: colors.isDark
+                                                  ? colors.primaryLight
+                                                  : colors.primaryDark,
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6),
+                                Text(
+                                  CurrencyFormatter.format(
+                                    item.totalPrice,
+                                    symbol: settings.currencySymbol,
+                                  ),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: colors.isDark
+                                        ? colors.primaryLight
+                                        : colors.primaryDark,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
                                 InkWell(
                                   onTap: () => pos.removeItem(index),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(5),
-                                    decoration: BoxDecoration(
-                                      color: colors.error.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(2),
                                     child: Icon(
                                       Icons.close,
                                       size: 15,
-                                      color: colors.error,
+                                      color: colors.error.withValues(
+                                        alpha: 0.8,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 4),
 
-                            // Bottom Line: Price (Right) | Quantity & Weight Controls (Center) | Total (Left)
+                            // Bottom Row: Unit Price / Stock badge + Stepper (- / qty / +)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Unit price
-                                Text(
-                                  CurrencyFormatter.format(
-                                    item.unitPrice,
-                                    symbol: settings.currencySymbol,
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colors.textMuted,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      CurrencyFormatter.format(
+                                        item.unitPrice,
+                                        symbol: settings.currencySymbol,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: colors.textMuted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (isMaxReached) ...[
+                                      const SizedBox(width: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: colors.warning.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            3,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'أقصى مخزون',
+                                          style: TextStyle(
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: colors.warning,
+                                          ),
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '• المتاح: ${NumberParser.formatQuantity(maxStock)}',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: colors.textMuted.withValues(
+                                            alpha: 0.7,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
 
-                                // Quantity Controls with Weight/Scale Picker
+                                // Compact Stepper
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
                                       icon: const Icon(
                                         Icons.remove_circle_outline,
-                                        size: 20,
+                                        size: 18,
                                       ),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
+                                        minWidth: 24,
+                                        minHeight: 24,
                                       ),
                                       color: colors.textSecondary,
                                       onPressed: () => pos.decrementQuantity(
                                         index,
-                                        item.quantity <= 1.0 && item.quantity > 0.25 ? 0.25 : 1.0,
+                                        item.quantity <= 1.0 &&
+                                                item.quantity > 0.25
+                                            ? 0.25
+                                            : 1.0,
                                       ),
                                     ),
                                     Tooltip(
-                                      message: 'اضغط لتعديل الوزن أو الكمية (أوزان سريعة)',
+                                      message:
+                                          'اضغط لتعديل الوزن أو الكمية (أوزان سريعة)',
                                       child: InkWell(
-                                        borderRadius: BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(4),
                                         onTap: () => _showWeightDialog(
                                           context,
                                           item,
@@ -816,17 +871,20 @@ class _CartPanelState extends State<CartPanel> {
                                         ),
                                         child: Container(
                                           constraints: const BoxConstraints(
-                                            minWidth: 42,
+                                            minWidth: 38,
                                           ),
                                           padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 3,
+                                            horizontal: 4,
+                                            vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
                                             color: colors.surface,
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
                                             border: Border.all(
-                                              color: colors.primary.withValues(alpha: 0.3),
+                                              color: colors.primary.withValues(
+                                                alpha: 0.3,
+                                              ),
                                             ),
                                           ),
                                           alignment: Alignment.center,
@@ -834,17 +892,19 @@ class _CartPanelState extends State<CartPanel> {
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
-                                                NumberParser.formatQuantity(item.quantity),
+                                                NumberParser.formatQuantity(
+                                                  item.quantity,
+                                                ),
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 13,
+                                                  fontSize: 11.5,
                                                   color: colors.textPrimary,
                                                 ),
                                               ),
                                               const SizedBox(width: 2),
                                               Icon(
                                                 Icons.scale_rounded,
-                                                size: 13,
+                                                size: 11,
                                                 color: colors.primary,
                                               ),
                                             ],
@@ -855,28 +915,37 @@ class _CartPanelState extends State<CartPanel> {
                                     IconButton(
                                       icon: Icon(
                                         Icons.add_circle_outline,
-                                        size: 20,
-                                        color: (item.quantity >= pos.getMaxStock(item))
-                                            ? colors.textMuted.withValues(alpha: 0.35)
+                                        size: 18,
+                                        color: isMaxReached
+                                            ? colors.textMuted.withValues(
+                                                alpha: 0.35,
+                                              )
                                             : colors.primary,
                                       ),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
+                                        minWidth: 24,
+                                        minHeight: 24,
                                       ),
-                                      onPressed: (item.quantity >= pos.getMaxStock(item))
+                                      onPressed: isMaxReached
                                           ? () {
-                                              final maxStock = pos.getMaxStock(item);
-                                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).hideCurrentSnackBar();
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
                                                 SnackBar(
                                                   content: Text(
                                                     'عفواً، لا يمكن زيادة الكمية؛ المتاح بالمخزون هو (${NumberParser.formatQuantity(maxStock)}) فقط!',
                                                   ),
-                                                  backgroundColor: colors.warning,
-                                                  behavior: SnackBarBehavior.floating,
-                                                  duration: const Duration(seconds: 2),
+                                                  backgroundColor:
+                                                      colors.warning,
+                                                  behavior:
+                                                      SnackBarBehavior.floating,
+                                                  duration: const Duration(
+                                                    seconds: 2,
+                                                  ),
                                                 ),
                                               );
                                             }
@@ -886,21 +955,6 @@ class _CartPanelState extends State<CartPanel> {
                                             ),
                                     ),
                                   ],
-                                ),
-
-                                // Line Total Price
-                                Text(
-                                  CurrencyFormatter.format(
-                                    item.totalPrice,
-                                    symbol: settings.currencySymbol,
-                                  ),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: colors.isDark
-                                        ? colors.primaryLight
-                                        : colors.primaryDark,
-                                  ),
                                 ),
                               ],
                             ),
@@ -915,21 +969,21 @@ class _CartPanelState extends State<CartPanel> {
 
           // 3. Payment & Totals Section with Delivery, Discount & Side-by-Side Cash Input
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(color: colors.surface),
             child: Column(
               children: [
                 // Subtotal & Breakdown row (if discount or delivery is applied)
                 if (pos.discount > 0 || pos.deliveryFee > 0) ...[
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.only(bottom: 4),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           AppStrings.subtotal,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: colors.textSecondary,
                           ),
                         ),
@@ -939,7 +993,7 @@ class _CartPanelState extends State<CartPanel> {
                             symbol: settings.currencySymbol,
                           ),
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             color: colors.textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -957,7 +1011,7 @@ class _CartPanelState extends State<CartPanel> {
                     Text(
                       AppStrings.grandTotal,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: colors.textPrimary,
                       ),
@@ -968,7 +1022,7 @@ class _CartPanelState extends State<CartPanel> {
                         symbol: settings.currencySymbol,
                       ),
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: colors.isDark
                             ? colors.primaryLight
@@ -978,26 +1032,26 @@ class _CartPanelState extends State<CartPanel> {
                   ],
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
 
                 // 4. Delivery Fee Input Row (الدليفري / خدمة التوصيل)
                 Row(
                   key: const ValueKey('delivery_input_section'),
                   children: [
                     SizedBox(
-                      width: 110,
+                      width: 95,
                       child: Row(
                         children: [
                           const Icon(
                             Icons.delivery_dining_rounded,
-                            size: 19,
+                            size: 17,
                             color: Color(0xFF0D9488),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           Text(
                             'الدليفري:',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: colors.textSecondary,
                             ),
@@ -1005,10 +1059,10 @@ class _CartPanelState extends State<CartPanel> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: SizedBox(
-                        height: 44,
+                        height: 38,
                         child: TextField(
                           key: const ValueKey('pos_delivery_text_field'),
                           controller: _deliveryCtrl,
@@ -1017,7 +1071,7 @@ class _CartPanelState extends State<CartPanel> {
                             decimal: true,
                           ),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: colors.textPrimary,
                           ),
@@ -1025,32 +1079,32 @@ class _CartPanelState extends State<CartPanel> {
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                              horizontal: 10,
+                              vertical: 8,
                             ),
                             hintText: '0.00',
                             hintStyle: TextStyle(
                               color: colors.textMuted,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                             prefixIcon: Container(
-                              width: 36,
+                              width: 32,
                               alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.only(right: 6),
                               child: Text(
                                 settings.currencySymbol,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: colors.textMuted,
                                 ),
                               ),
                             ),
                             prefixIconConstraints: const BoxConstraints(
-                              minWidth: 36,
-                              maxWidth: 36,
-                              minHeight: 44,
-                              maxHeight: 44,
+                              minWidth: 32,
+                              maxWidth: 32,
+                              minHeight: 38,
+                              maxHeight: 38,
                             ),
                             suffixIcon: Visibility(
                               visible: pos.deliveryFee > 0,
@@ -1058,11 +1112,11 @@ class _CartPanelState extends State<CartPanel> {
                               maintainAnimation: true,
                               maintainState: true,
                               child: IconButton(
-                                icon: const Icon(Icons.clear, size: 16),
+                                icon: const Icon(Icons.clear, size: 14),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(
-                                  minWidth: 30,
-                                  minHeight: 30,
+                                  minWidth: 26,
+                                  minHeight: 26,
                                 ),
                                 onPressed: () {
                                   _deliveryCtrl.clear();
@@ -1071,7 +1125,7 @@ class _CartPanelState extends State<CartPanel> {
                                 },
                               ),
                             ),
-                            isDense: false,
+                            isDense: true,
                           ),
                           onChanged: (val) {
                             final parsed = NumberParser.tryParseDouble(
@@ -1087,26 +1141,26 @@ class _CartPanelState extends State<CartPanel> {
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 // 5. Discount Input Row (الخصم)
                 Row(
                   key: const ValueKey('discount_input_section'),
                   children: [
                     SizedBox(
-                      width: 110,
+                      width: 95,
                       child: Row(
                         children: [
                           Icon(
                             Icons.discount_outlined,
-                            size: 18,
+                            size: 16,
                             color: colors.warning,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           Text(
                             'الخصم:',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: colors.textSecondary,
                             ),
@@ -1114,10 +1168,10 @@ class _CartPanelState extends State<CartPanel> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: SizedBox(
-                        height: 44,
+                        height: 38,
                         child: TextField(
                           key: const ValueKey('pos_discount_text_field'),
                           controller: _discountCtrl,
@@ -1126,7 +1180,7 @@ class _CartPanelState extends State<CartPanel> {
                             decimal: true,
                           ),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: colors.textPrimary,
                           ),
@@ -1134,32 +1188,32 @@ class _CartPanelState extends State<CartPanel> {
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                              horizontal: 10,
+                              vertical: 8,
                             ),
                             hintText: '0.00',
                             hintStyle: TextStyle(
                               color: colors.textMuted,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                             prefixIcon: Container(
-                              width: 36,
+                              width: 32,
                               alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.only(right: 6),
                               child: Text(
                                 settings.currencySymbol,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: colors.textMuted,
                                 ),
                               ),
                             ),
                             prefixIconConstraints: const BoxConstraints(
-                              minWidth: 36,
-                              maxWidth: 36,
-                              minHeight: 44,
-                              maxHeight: 44,
+                              minWidth: 32,
+                              maxWidth: 32,
+                              minHeight: 38,
+                              maxHeight: 38,
                             ),
                             suffixIcon: Visibility(
                               visible: pos.discount > 0,
@@ -1167,11 +1221,11 @@ class _CartPanelState extends State<CartPanel> {
                               maintainAnimation: true,
                               maintainState: true,
                               child: IconButton(
-                                icon: const Icon(Icons.clear, size: 16),
+                                icon: const Icon(Icons.clear, size: 14),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(
-                                  minWidth: 30,
-                                  minHeight: 30,
+                                  minWidth: 26,
+                                  minHeight: 26,
                                 ),
                                 onPressed: () {
                                   _discountCtrl.clear();
@@ -1180,7 +1234,7 @@ class _CartPanelState extends State<CartPanel> {
                                 },
                               ),
                             ),
-                            isDense: false,
+                            isDense: true,
                           ),
                           onChanged: (val) {
                             final parsed = NumberParser.tryParseDouble(
@@ -1196,26 +1250,26 @@ class _CartPanelState extends State<CartPanel> {
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 // 6. Cash Received Row (المبلغ المستلم)
                 Row(
                   key: const ValueKey('cash_received_section'),
                   children: [
                     SizedBox(
-                      width: 110,
+                      width: 95,
                       child: Row(
                         children: [
                           Icon(
                             Icons.payments_outlined,
-                            size: 18,
+                            size: 16,
                             color: colors.primary,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           Text(
-                            'المبلغ المستلم:',
+                            'المستلم:',
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: colors.textSecondary,
                             ),
@@ -1223,10 +1277,10 @@ class _CartPanelState extends State<CartPanel> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: SizedBox(
-                        height: 44,
+                        height: 38,
                         child: TextField(
                           key: const ValueKey('pos_paid_text_field'),
                           controller: _paidCtrl,
@@ -1235,7 +1289,7 @@ class _CartPanelState extends State<CartPanel> {
                             decimal: true,
                           ),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: colors.textPrimary,
                           ),
@@ -1243,40 +1297,40 @@ class _CartPanelState extends State<CartPanel> {
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                              horizontal: 10,
+                              vertical: 8,
                             ),
                             hintText: '0.00',
                             hintStyle: TextStyle(
                               color: colors.textMuted,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                             prefixIcon: Container(
-                              width: 36,
+                              width: 32,
                               alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.only(right: 6),
                               child: Text(
                                 settings.currencySymbol,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: colors.textMuted,
                                 ),
                               ),
                             ),
                             prefixIconConstraints: const BoxConstraints(
-                              minWidth: 36,
-                              maxWidth: 36,
-                              minHeight: 44,
-                              maxHeight: 44,
+                              minWidth: 32,
+                              maxWidth: 32,
+                              minHeight: 38,
+                              maxHeight: 38,
                             ),
                             suffixIcon: pos.amountPaid > 0
                                 ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 16),
+                                    icon: const Icon(Icons.clear, size: 14),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(
-                                      minWidth: 30,
-                                      minHeight: 30,
+                                      minWidth: 26,
+                                      minHeight: 26,
                                     ),
                                     onPressed: () {
                                       _paidCtrl.clear();
@@ -1285,7 +1339,7 @@ class _CartPanelState extends State<CartPanel> {
                                     },
                                   )
                                 : null,
-                            isDense: false,
+                            isDense: true,
                           ),
                           onChanged: (val) {
                             final parsed = NumberParser.tryParseDouble(val);
@@ -1301,7 +1355,7 @@ class _CartPanelState extends State<CartPanel> {
                       Tooltip(
                         message: AppStrings.exactAmount,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                           onTap: () {
                             pos.setAmountPaid(pos.grandTotal);
                             _lastAmountPaid = pos.grandTotal;
@@ -1310,11 +1364,11 @@ class _CartPanelState extends State<CartPanel> {
                                 : pos.grandTotal.toStringAsFixed(2);
                           },
                           child: Container(
-                            height: 44,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             decoration: BoxDecoration(
                               color: colors.primary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                               border: Border.all(
                                 color: colors.primary.withValues(alpha: 0.3),
                               ),
@@ -1325,14 +1379,14 @@ class _CartPanelState extends State<CartPanel> {
                               children: [
                                 Icon(
                                   Icons.check_rounded,
-                                  size: 15,
+                                  size: 14,
                                   color: colors.primary,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 3),
                                 Text(
                                   'بالضبط',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     color: colors.primary,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1346,12 +1400,12 @@ class _CartPanelState extends State<CartPanel> {
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
                 // 7. Change Due / Remaining Box
                 Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: (pos.cartItems.isNotEmpty && pos.changeDue > 0)
                         ? colors.info.withValues(alpha: 0.15)
@@ -1359,7 +1413,7 @@ class _CartPanelState extends State<CartPanel> {
                                   pos.cartItems.isNotEmpty
                               ? colors.warning.withValues(alpha: 0.12)
                               : colors.cardSurface),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: (pos.cartItems.isNotEmpty && pos.changeDue > 0)
                           ? colors.info
@@ -1378,7 +1432,7 @@ class _CartPanelState extends State<CartPanel> {
                             ? 'المتبقي مطلوب تحصيله:'
                             : AppStrings.changeDue,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w600,
                           color: (pos.cartItems.isNotEmpty && pos.changeDue > 0)
                               ? colors.info
@@ -1404,7 +1458,7 @@ class _CartPanelState extends State<CartPanel> {
                                       symbol: settings.currencySymbol,
                                     )),
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.bold,
                           color: (pos.cartItems.isNotEmpty && pos.changeDue > 0)
                               ? colors.info
@@ -1418,7 +1472,7 @@ class _CartPanelState extends State<CartPanel> {
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // 8. Dual Action Buttons: Save & Print vs Save Without Printing
                 Row(
