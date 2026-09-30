@@ -80,10 +80,11 @@ class _POSViewState extends State<POSView> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: (pos.searchQuery.isNotEmpty
-                                  ? colors.primary
-                                  : AppColors.primary)
-                              .withValues(alpha: 0.12),
+                          color:
+                              (pos.searchQuery.isNotEmpty
+                                      ? colors.primary
+                                      : AppColors.primary)
+                                  .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(

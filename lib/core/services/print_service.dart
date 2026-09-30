@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -358,9 +358,35 @@ class PrintService {
       ),
     );
 
+    await _printDocumentDirectly(doc, 'Receipt_${order.invoiceNumber}');
+  }
+
+  /// Sends PDF bytes directly to the default connected thermal printer without opening a printer selection dialog
+  static Future<void> _printDocumentDirectly(pw.Document doc, String documentName) async {
+    final pdfBytes = await doc.save();
+
+    try {
+      final printers = await Printing.listPrinters();
+      if (printers.isNotEmpty) {
+        final defaultPrinter = printers.firstWhere(
+          (p) => p.isDefault,
+          orElse: () => printers.first,
+        );
+        final printed = await Printing.directPrintPdf(
+          printer: defaultPrinter,
+          onLayout: (PdfPageFormat format) async => pdfBytes,
+          name: documentName,
+        );
+        if (printed) return;
+      }
+    } catch (e) {
+      debugPrint('Direct print attempt info: $e');
+    }
+
+    // Fallback if direct printer is unavailable
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => doc.save(),
-      name: 'Receipt_${order.invoiceNumber}',
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+      name: documentName,
     );
   }
 
@@ -491,10 +517,7 @@ class PrintService {
       ),
     );
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => doc.save(),
-      name: 'Shift_${shift.id}',
-    );
+    await _printDocumentDirectly(doc, 'Shift_${shift.id}');
   }
 
   static pw.Widget _buildShiftRow(

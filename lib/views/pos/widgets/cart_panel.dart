@@ -15,8 +15,8 @@ import '../../../providers/license_provider.dart';
 import '../../../providers/reports_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
+import '../../../core/services/print_service.dart';
 import '../../license/activation_dialog.dart';
-import 'receipt_preview_modal.dart';
 
 class CartPanel extends StatefulWidget {
   const CartPanel({super.key});
@@ -181,9 +181,36 @@ class _CartPanelState extends State<CartPanel> {
       inventory.loadInventory();
 
       if (saveAndPrint && mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => ReceiptPreviewModal(order: order, settings: settings),
+        // Direct print immediately without opening preview modal
+        PrintService.printReceipt(order: order, settings: settings);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.print_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'تم حفظ الفاتورة #${order.invoiceNumber} وإرسالها للطباعة فوراً 🖨️',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

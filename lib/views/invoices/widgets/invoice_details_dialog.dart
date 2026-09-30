@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/print_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../models/order_model.dart';
@@ -12,7 +13,6 @@ import '../../../providers/pos_provider.dart';
 import '../../../providers/reports_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
-import '../../pos/widgets/receipt_preview_modal.dart';
 import 'edit_invoice_dialog.dart';
 import 'invoice_return_dialog.dart';
 
@@ -383,17 +383,20 @@ class InvoiceDetailsDialog extends StatelessWidget {
           runSpacing: 8,
           alignment: WrapAlignment.end,
           children: [
-            // Action 1: Print / Preview Receipt
+            // Action 1: Direct Print Receipt
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(foregroundColor: colors.textPrimary),
               icon: const Icon(Icons.print_outlined, size: 18),
               label: const Text('طباعة إيصال'),
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => ReceiptPreviewModal(
-                    order: order,
-                    settings: settings,
+                PrintService.printReceipt(
+                  order: order,
+                  settings: settings,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('جاري إرسال إيصال الفاتورة #${order.invoiceNumber} للطباعة فوراً...'),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               },

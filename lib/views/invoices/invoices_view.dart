@@ -6,7 +6,7 @@ import '../../core/utils/date_formatter.dart';
 import '../../models/order_model.dart';
 import '../../providers/invoices_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../pos/widgets/receipt_preview_modal.dart';
+import '../../core/services/print_service.dart';
 import 'widgets/edit_invoice_dialog.dart';
 import 'widgets/invoice_details_dialog.dart';
 import 'widgets/invoice_return_dialog.dart';
@@ -587,13 +587,16 @@ class _InvoicesViewState extends State<InvoicesView> {
                                               // Print button
                                               IconButton(
                                                 icon: Icon(Icons.print_outlined, size: 18, color: colors.textSecondary),
-                                                tooltip: 'طباعة الإيصال',
+                                                tooltip: 'طباعة الإيصال فورياً',
                                                 onPressed: () {
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (_) => ReceiptPreviewModal(
-                                                      order: order,
-                                                      settings: settings,
+                                                  PrintService.printReceipt(
+                                                    order: order,
+                                                    settings: settings,
+                                                  );
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text('جاري إرسال إيصال الفاتورة #${order.invoiceNumber} للطباعة...'),
+                                                      duration: const Duration(seconds: 2),
                                                     ),
                                                   );
                                                 },
