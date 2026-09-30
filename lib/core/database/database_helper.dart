@@ -33,6 +33,7 @@ class DatabaseHelper {
     await _ensureLicenseTableExists(db);
     await _ensureProductsQuickItemColumnExists(db);
     await _ensureOrdersDeliveryFeeColumnExists(db);
+    await _ensureIndexesExist(db);
     await _cleanupOrphanedProducts(db);
   }
 
@@ -143,6 +144,22 @@ class DatabaseHelper {
         )
       ''');
     } catch (_) {}
+  }
+
+  Future<void> _ensureIndexesExist(Database db) async {
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_variant_barcode ON product_variants (sku_barcode)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_variant_product_id ON product_variants (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_product_category ON products (category_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_product_quick ON products (is_quick_item)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_invoice ON orders (invoice_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_created_at ON orders (created_at)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_items_variant_id ON order_items (variant_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_returns_order_id ON returns (order_id)');
+    } catch (e) {
+      debugPrint('Error creating DB indexes: $e');
+    }
   }
 
   Future<String> getDatabasePath() async {
@@ -461,17 +478,35 @@ class DatabaseHelper {
     query += ' ORDER BY p.id DESC';
 
     final productRows = await db.rawQuery(query, args);
-    List<ProductModel> products = [];
+    if (productRows.isEmpty) return [];
 
+    final productIds = productRows.map((r) => r['id'] as int).toList();
+    final Map<int, List<ProductVariantModel>> variantsByProductId = {};
+
+    // Batch fetch variants in chunks of 500 to stay well within SQLite host limits
+    const chunkSize = 500;
+    for (int i = 0; i < productIds.length; i += chunkSize) {
+      final chunk = productIds.sublist(
+        i,
+        i + chunkSize > productIds.length ? productIds.length : i + chunkSize,
+      );
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final variantRows = await db.rawQuery(
+        'SELECT pv.*, p.name as product_name FROM product_variants pv JOIN products p ON pv.product_id = p.id WHERE pv.product_id IN ($placeholders) ORDER BY pv.id ASC',
+        chunk,
+      );
+
+      for (final vRow in variantRows) {
+        final prodId = vRow['product_id'] as int;
+        variantsByProductId.putIfAbsent(prodId, () => []);
+        variantsByProductId[prodId]!.add(ProductVariantModel.fromMap(vRow));
+      }
+    }
+
+    final List<ProductModel> products = [];
     for (final row in productRows) {
       final pId = row['id'] as int;
-      final variantRows = await db.query(
-        'product_variants',
-        where: 'product_id = ?',
-        whereArgs: [pId],
-        orderBy: 'id ASC',
-      );
-      final variants = variantRows.map((v) => ProductVariantModel.fromMap(v, productName: row['name'] as String?)).toList();
+      final variants = variantsByProductId[pId] ?? [];
 
       products.add(ProductModel.fromMap(
         row,
