@@ -12,6 +12,7 @@ import '../../models/order_model.dart';
 import '../../models/order_item_model.dart';
 import '../../models/shift_model.dart';
 import '../../models/return_model.dart';
+import '../utils/arabic_search_utils.dart';
 import 'seed_data.dart';
 
 class DatabaseHelper {
@@ -453,12 +454,6 @@ class DatabaseHelper {
       args.add(categoryId);
     }
 
-    if (search != null && search.trim().isNotEmpty) {
-      conditions.add('(p.name LIKE ? OR p.description LIKE ? OR EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND (pv.sku_barcode LIKE ? OR pv.size LIKE ? OR pv.color LIKE ?)))');
-      final s = '%${search.trim()}%';
-      args.addAll([s, s, s, s, s]);
-    }
-
     if (conditions.isNotEmpty) {
       query += ' WHERE ${conditions.join(' AND ')}';
     }
@@ -483,6 +478,10 @@ class DatabaseHelper {
         categoryName: row['category_name'] as String?,
         variants: variants,
       ));
+    }
+
+    if (search != null && search.trim().isNotEmpty) {
+      return ArabicSearchUtils.filterAndRank(products, search);
     }
 
     return products;

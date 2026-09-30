@@ -36,7 +36,7 @@ class _POSViewState extends State<POSView> {
             child: Column(
               children: [
                 const BarcodeSearchBar(),
-                // Title Header Bar for Quick Items
+                // Dynamic Title Header Bar (Search Results vs Quick Items)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -47,54 +47,96 @@ class _POSViewState extends State<POSView> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.18),
+                          color: pos.searchQuery.isNotEmpty
+                              ? colors.primary.withValues(alpha: 0.18)
+                              : Colors.amber.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
-                          Icons.flash_on_rounded,
-                          color: Colors.amber,
+                        child: Icon(
+                          pos.searchQuery.isNotEmpty
+                              ? Icons.search_rounded
+                              : Icons.flash_on_rounded,
+                          color: pos.searchQuery.isNotEmpty
+                              ? colors.primary
+                              : Colors.amber,
                           size: 18,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'الأصناف السريعة',
+                        pos.searchQuery.isNotEmpty
+                            ? 'نتائج البحث عن: "${pos.searchQuery}"'
+                            : 'الأصناف السريعة',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: colors.textPrimary,
                         ),
                       ),
-                      if (pos.quickProducts.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${pos.quickProducts.length} صنف',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: colors.primary,
-                            ),
-                          ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
                         ),
-                      ],
-                      const Spacer(),
-                      Text(
-                        'إضافة فورية للفاتورة بضغطة واحدة',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.textMuted,
-                          fontWeight: FontWeight.w500,
+                        decoration: BoxDecoration(
+                          color: (pos.searchQuery.isNotEmpty
+                                  ? colors.primary
+                                  : AppColors.primary)
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          pos.searchQuery.isNotEmpty
+                              ? '${pos.products.length} صنف مطابق'
+                              : '${pos.quickProducts.length} صنف',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: colors.primary,
+                          ),
                         ),
                       ),
+                      const Spacer(),
+                      if (pos.searchQuery.isNotEmpty)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () => pos.clearSearch(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.close_rounded,
+                                  size: 14,
+                                  color: colors.error,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'إلغاء البحث والعودة',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: colors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          'إضافة فورية للفاتورة بضغطة واحدة',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colors.textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                     ],
                   ),
                 ),

@@ -23,6 +23,72 @@ class ProductCardGrid extends StatelessWidget {
     }
 
     if (products.isEmpty) {
+      if (pos.searchQuery.isNotEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.search_off_rounded,
+                    size: 48,
+                    color: colors.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'لا توجد أصناف مطابقة للبحث: "${pos.searchQuery}"',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'تأكد من كتابة اسم الصنف أو الباركود بشكل صحيح، أو امسح البحث للعودة.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text(
+                    'مسح البحث والعودة للأصناف السريعة',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () => pos.clearSearch(),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       if (pos.isQuickFilterOnly) {
         return Center(
           child: Padding(
@@ -78,20 +144,19 @@ class ProductCardGrid extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'لا توجد أصناف مطابقة للبحث أو القسم',
+              'لا توجد أصناف مطابقة للقسم المختار',
               style: TextStyle(
                 color: colors.textMuted,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (pos.searchQuery.isNotEmpty || pos.selectedCategoryId != null) ...[
+            if (pos.selectedCategoryId != null) ...[
               const SizedBox(height: 12),
               TextButton.icon(
                 icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text('إعادة ضبط البحث والأقسام'),
+                label: const Text('إعادة ضبط القسم'),
                 onPressed: () {
-                  pos.clearSearch();
                   pos.selectCategory(null);
                 },
               ),

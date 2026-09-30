@@ -60,6 +60,15 @@ class _BarcodeSearchBarState extends State<BarcodeSearchBar> {
     final colors = context.colors;
     final hasLogo = settings.logoPath != null && File(settings.logoPath!).existsSync();
 
+    // Sync controller when search is cleared from header or empty state button
+    if (pos.searchQuery.isEmpty && _controller.text.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && context.read<POSProvider>().searchQuery.isEmpty) {
+          _controller.clear();
+        }
+      });
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(

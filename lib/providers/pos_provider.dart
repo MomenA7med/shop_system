@@ -52,16 +52,18 @@ class POSProvider with ChangeNotifier {
   double get changeDue => (_cartItems.isNotEmpty && _amountPaid > grandTotal) ? _amountPaid - grandTotal : 0.0;
   bool get canCheckout => _cartItems.isNotEmpty && _amountPaid >= grandTotal && grandTotal > 0;
 
-  Future<void> loadPOSData() async {
+  Future<void> loadPOSData({bool checkMigrations = false}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      await DatabaseHelper.instance.ensureSchemaMigrations();
-      await DatabaseHelper.instance.cleanupOrphanedProducts();
+      if (checkMigrations) {
+        await DatabaseHelper.instance.ensureSchemaMigrations();
+        await DatabaseHelper.instance.cleanupOrphanedProducts();
+      }
       _categories = await DatabaseHelper.instance.getAllCategories();
       _products = await DatabaseHelper.instance.getProducts(
-        categoryId: _selectedCategoryId,
+        categoryId: _searchQuery.isNotEmpty ? null : _selectedCategoryId,
         search: _searchQuery,
       );
     } catch (e) {
