@@ -537,10 +537,10 @@ class _CartPanelState extends State<CartPanel> {
     _syncPaidAmount(pos);
 
     final screenWidth = MediaQuery.of(context).size.width;
-    // Spacious comfortable panel width
+    // Spacious comfortable panel width for supermarket invoice viewing
     final panelWidth = screenWidth < 1100
-        ? 390.0
-        : (screenWidth < 1400 ? 430.0 : 460.0);
+        ? 430.0
+        : (screenWidth < 1400 ? 490.0 : 560.0);
 
     return Container(
       width: panelWidth,

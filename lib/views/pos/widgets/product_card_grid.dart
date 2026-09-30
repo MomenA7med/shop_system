@@ -167,12 +167,12 @@ class ProductCardGrid extends StatelessWidget {
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 260,
-        mainAxisExtent: 210,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        maxCrossAxisExtent: 220,
+        mainAxisExtent: 96,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
       ),
       itemCount: products.length,
       itemBuilder: (context, index) {
@@ -198,12 +198,11 @@ class ProductCardGrid extends StatelessWidget {
     final hasStock = product.totalStock > 0;
     final isDark = colors.isDark;
     final variants = product.variants;
-    final displayVariantsCount = variants.length > 3 ? 2 : variants.length;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         onTap: () {
           if (!hasStock) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -228,99 +227,105 @@ class ProductCardGrid extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: product.hasLowStock
                   ? colors.warning.withValues(alpha: 0.6)
                   : (product.isQuickItem
-                        ? AppColors.primary.withValues(alpha: 0.35)
+                        ? AppColors.primary.withValues(alpha: 0.4)
                         : colors.border),
               width: product.isQuickItem || product.hasLowStock ? 1.4 : 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withValues(alpha: 0.25)
-                    : Colors.black.withValues(alpha: 0.04),
-                blurRadius: isDark ? 6 : 8,
-                offset: const Offset(0, 2),
+                    ? Colors.black.withValues(alpha: 0.2)
+                    : Colors.black.withValues(alpha: 0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header: Category Badge & Quick Item Badge & Stock Badge
+              // Header: Category/Quick Tag & Stock Tag
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (product.isQuickItem) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.flash_on_rounded,
-                                size: 11,
-                                color: Colors.amber,
-                              ),
-                              SizedBox(width: 2),
-                              Text(
-                                'سريع',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (product.isQuickItem) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.flash_on_rounded,
+                                  size: 10,
                                   color: Colors.amber,
                                 ),
+                                SizedBox(width: 1),
+                                Text(
+                                  'سريع',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                        ],
+                        if (product.categoryName != null)
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 1.5,
                               ),
-                            ],
+                              decoration: BoxDecoration(
+                                color: colors.secondary.withValues(
+                                  alpha: isDark ? 0.2 : 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                product.categoryName!,
+                                style: TextStyle(
+                                  fontSize: 8.5,
+                                  color: isDark
+                                      ? const Color(0xFF818CF8)
+                                      : const Color(0xFF4F46E5),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
                       ],
-                      if (product.categoryName != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.secondary.withValues(
-                              alpha: isDark ? 0.2 : 0.1,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            product.categoryName!,
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: isDark
-                                  ? const Color(0xFF818CF8)
-                                  : const Color(0xFF4F46E5),
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(width: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
+                      horizontal: 5,
+                      vertical: 1.5,
                     ),
                     decoration: BoxDecoration(
                       color: hasStock
@@ -328,14 +333,14 @@ class ProductCardGrid extends StatelessWidget {
                                 ? colors.warning.withValues(alpha: 0.15)
                                 : colors.primary.withValues(alpha: 0.15))
                           : colors.error.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(3),
                     ),
                     child: Text(
                       hasStock
-                          ? 'مخزون: ${NumberParser.formatQuantity(product.totalStock)}'
+                          ? NumberParser.formatQuantity(product.totalStock)
                           : AppStrings.outOfStock,
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 8.5,
                         fontWeight: FontWeight.bold,
                         color: hasStock
                             ? (product.hasLowStock
@@ -350,167 +355,84 @@ class ProductCardGrid extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 8),
-
-              // Product Name (2 Lines Max)
-              SizedBox(
-                height: 38,
-                child: Text(
-                  product.name,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
-                    height: 1.25,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              // Product Name (1 Line Bold)
+              Text(
+                product.name,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textPrimary,
+                  height: 1.2,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
 
-              const Spacer(),
-
-              // Variant Direct-Tap Chips (1-tap add to cart)
-              if (variants.length > 1)
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: [
-                    ...variants.take(displayVariantsCount).map((variant) {
-                      final isOutOfStock = variant.stockQuantity <= 0;
-                      final hasDesc = variant.color.isNotEmpty &&
-                          variant.color != '-' &&
-                          variant.color != 'افتراضي';
-                      final label = hasDesc
-                          ? '${variant.size} (${variant.color})'
-                          : variant.size;
-
-                      return Tooltip(
-                        message:
-                            '$label - السعر: ${variant.sellingPrice} - متبقي: ${variant.stockQuantity}',
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(6),
-                          onTap: isOutOfStock
-                              ? null
-                              : () {
-                                  pos.addVariantToCart(product, variant);
-                                },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isOutOfStock
-                                  ? colors.cardSurface
-                                  : (isDark
-                                        ? colors.surfaceLight
-                                        : colors.surfaceLight.withValues(
-                                            alpha: 0.7,
-                                          )),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isOutOfStock
-                                    ? colors.border
-                                    : colors.primary.withValues(alpha: 0.5),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Text(
-                              '+ $label (${variant.sellingPrice.toStringAsFixed(0)}ج)',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: isOutOfStock
-                                    ? colors.textMuted
-                                    : colors.textPrimary,
-                                decoration: isOutOfStock
-                                    ? TextDecoration.lineThrough
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                    if (variants.length > 3)
-                      InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () {
-                          _showVariantSelectionDialog(
-                            context,
-                            product,
-                            currencySymbol,
-                            pos,
-                            colors,
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: colors.primary.withValues(alpha: 0.4),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.tune, size: 11, color: colors.primary),
-                              const SizedBox(width: 3),
-                              Text(
-                                '+${variants.length - 2} المزيد',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: colors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-              const SizedBox(height: 6),
-
-              // Price Tag & Add to Cart button
+              // Price & Quick Action / Variants indicator
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    product.minPrice == product.maxPrice
-                        ? CurrencyFormatter.format(
-                            product.minPrice,
-                            symbol: currencySymbol,
-                          )
-                        : '${CurrencyFormatter.format(product.minPrice, symbol: "")} - ${CurrencyFormatter.format(product.maxPrice, symbol: currencySymbol)}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? colors.primaryLight : colors.primaryDark,
+                  Expanded(
+                    child: Text(
+                      product.minPrice == product.maxPrice
+                          ? CurrencyFormatter.format(
+                              product.minPrice,
+                              symbol: currencySymbol,
+                            )
+                          : '${CurrencyFormatter.format(product.minPrice, symbol: "")} - ${CurrencyFormatter.format(product.maxPrice, symbol: currencySymbol)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? colors.primaryLight : colors.primaryDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: colors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
+                  const SizedBox(width: 4),
+                  if (variants.length > 1)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: colors.primary.withValues(alpha: 0.3),
+                          width: 0.6,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.tune, size: 10, color: colors.primary),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${variants.length}',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: colors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: colors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: 14,
+                        color: isDark ? colors.primaryLight : colors.primary,
+                      ),
                     ),
-                    child: Icon(
-                      variants.length > 1
-                          ? Icons.tune_rounded
-                          : Icons.add_shopping_cart_rounded,
-                      size: 16,
-                      color: isDark ? colors.primaryLight : colors.primary,
-                    ),
-                  ),
                 ],
               ),
             ],
