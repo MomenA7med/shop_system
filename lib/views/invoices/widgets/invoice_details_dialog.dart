@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
@@ -389,9 +390,13 @@ class InvoiceDetailsDialog extends StatelessWidget {
               icon: const Icon(Icons.print_outlined, size: 18),
               label: const Text('طباعة إيصال'),
               onPressed: () {
-                PrintService.printReceipt(
-                  order: order,
-                  settings: settings,
+                unawaited(
+                  PrintService.printReceipt(
+                    order: order,
+                    settings: settings,
+                  ).catchError((err) {
+                    debugPrint('Receipt print error: $err');
+                  }),
                 );
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

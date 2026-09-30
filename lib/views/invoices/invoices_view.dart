@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
@@ -589,9 +590,13 @@ class _InvoicesViewState extends State<InvoicesView> {
                                                 icon: Icon(Icons.print_outlined, size: 18, color: colors.textSecondary),
                                                 tooltip: 'طباعة الإيصال فورياً',
                                                 onPressed: () {
-                                                  PrintService.printReceipt(
-                                                    order: order,
-                                                    settings: settings,
+                                                  unawaited(
+                                                    PrintService.printReceipt(
+                                                      order: order,
+                                                      settings: settings,
+                                                    ).catchError((err) {
+                                                      debugPrint('Receipt print error: $err');
+                                                    }),
                                                   );
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     SnackBar(

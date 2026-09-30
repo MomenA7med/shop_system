@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -181,8 +182,15 @@ class _CartPanelState extends State<CartPanel> {
       inventory.loadInventory();
 
       if (saveAndPrint && mounted) {
-        // Direct print immediately without opening preview modal
-        PrintService.printReceipt(order: order, settings: settings);
+        // Direct print immediately in background without blocking UI event loop
+        unawaited(
+          PrintService.printReceipt(
+            order: order,
+            settings: settings,
+          ).catchError((err) {
+            debugPrint('Non-blocking receipt print error: $err');
+          }),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(

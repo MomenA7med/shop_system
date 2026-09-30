@@ -24,46 +24,103 @@ class PrintService {
     marginBottom: 12 * PdfPageFormat.mm,
   );
 
+  static pw.Font? _cachedCairoRegular;
+  static pw.Font? _cachedCairoBold;
+  static bool _isFontWarmingUp = false;
+
+  /// Cached font loader for regular Arabic Cairo font with timeout and fallback
+  static Future<pw.Font> getCairoRegular() async {
+    if (_cachedCairoRegular != null) return _cachedCairoRegular!;
+    try {
+      _cachedCairoRegular = await PdfGoogleFonts.cairoRegular().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => pw.Font.helvetica(),
+      );
+      return _cachedCairoRegular!;
+    } catch (e) {
+      debugPrint('Cairo regular font load info: $e');
+      return pw.Font.helvetica();
+    }
+  }
+
+  /// Cached font loader for bold Arabic Cairo font with timeout and fallback
+  static Future<pw.Font> getCairoBold() async {
+    if (_cachedCairoBold != null) return _cachedCairoBold!;
+    try {
+      _cachedCairoBold = await PdfGoogleFonts.cairoBold().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => pw.Font.helveticaBold(),
+      );
+      return _cachedCairoBold!;
+    } catch (e) {
+      debugPrint('Cairo bold font load info: $e');
+      return pw.Font.helveticaBold();
+    }
+  }
+
+  /// Warm up Google Fonts asynchronously in the background so printing is instant
+  static void warmUpFonts() {
+    if (_isFontWarmingUp) return;
+    _isFontWarmingUp = true;
+    Future.microtask(() async {
+      await getCairoRegular();
+      await getCairoBold();
+    });
+  }
+
+  /// Checks if a printer is a virtual print-to-file / PDF / fax driver that stalls headless printing
+  static bool _isVirtualPrinter(String printerName) {
+    final lower = printerName.toLowerCase();
+    return lower.contains('pdf') ||
+        lower.contains('onenote') ||
+        lower.contains('xps') ||
+        lower.contains('fax') ||
+        lower.contains('virtual') ||
+        lower.contains('writer') ||
+        lower.contains('document');
+  }
+
   static Future<void> printReceipt({
     required OrderModel order,
     required StoreSettingsModel settings,
   }) async {
-    final doc = pw.Document();
-    final font = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
+    try {
+      final doc = pw.Document();
+      final font = await getCairoRegular();
+      final fontBold = await getCairoBold();
 
-    doc.addPage(
-      pw.Page(
-        pageFormat: thermalRoll80,
-        textDirection: pw.TextDirection.rtl,
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
-        build: (pw.Context context) {
-          return pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                // 1. Store Header (Solid Black)
-                pw.Text(
-                  settings.storeName,
-                  style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColors.black),
-                  textAlign: pw.TextAlign.center,
-                ),
-                if (settings.slogan.isNotEmpty) ...[
-                  pw.SizedBox(height: 2),
+      doc.addPage(
+        pw.Page(
+          pageFormat: thermalRoll80,
+          textDirection: pw.TextDirection.rtl,
+          theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+          build: (pw.Context context) {
+            return pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  // 1. Store Header (Solid Black)
                   pw.Text(
-                    settings.slogan,
-                    style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.black),
+                    settings.storeName,
+                    style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColors.black),
                     textAlign: pw.TextAlign.center,
                   ),
-                ],
-                if (settings.phone.isNotEmpty) ...[
-                  pw.SizedBox(height: 2),
-                  pw.Text(
-                    'هاتف: ${settings.phone}',
-                    style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.black),
-                  ),
-                ],
+                  if (settings.slogan.isNotEmpty) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      settings.slogan,
+                      style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.black),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ],
+                  if (settings.phone.isNotEmpty) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'هاتف: ${settings.phone}',
+                      style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.black),
+                    ),
+                  ],
                 if (settings.address.isNotEmpty) ...[
                   pw.SizedBox(height: 2),
                   pw.Text(
@@ -358,54 +415,81 @@ class PrintService {
       ),
     );
 
-    await _printDocumentDirectly(doc, 'Receipt_${order.invoiceNumber}');
+      await _printDocumentDirectly(doc, 'Receipt_${order.invoiceNumber}');
+    } catch (e) {
+      debugPrint('Error during printReceipt execution: $e');
+    }
   }
 
   /// Sends PDF bytes directly to the default connected thermal printer without opening a printer selection dialog
   static Future<void> _printDocumentDirectly(pw.Document doc, String documentName) async {
-    final pdfBytes = await doc.save();
-
     try {
-      final printers = await Printing.listPrinters();
-      if (printers.isNotEmpty) {
-        final defaultPrinter = printers.firstWhere(
-          (p) => p.isDefault,
-          orElse: () => printers.first,
+      final pdfBytes = await doc.save();
+
+      Printer? targetPrinter;
+      try {
+        final printers = await Printing.listPrinters().timeout(
+          const Duration(milliseconds: 1200),
+          onTimeout: () => <Printer>[],
         );
-        final printed = await Printing.directPrintPdf(
-          printer: defaultPrinter,
-          onLayout: (PdfPageFormat format) async => pdfBytes,
-          name: documentName,
-        );
-        if (printed) return;
+        if (printers.isNotEmpty) {
+          // Look for default printer first, or first non-virtual printer
+          targetPrinter = printers.firstWhere(
+            (p) => p.isDefault,
+            orElse: () => printers.firstWhere(
+              (p) => !_isVirtualPrinter(p.name),
+              orElse: () => printers.first,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Printer discovery info: $e');
       }
+
+      if (targetPrinter != null) {
+        try {
+          final printed = await Future<bool>.value(
+            Printing.directPrintPdf(
+              printer: targetPrinter,
+              onLayout: (PdfPageFormat format) async => pdfBytes,
+              name: documentName,
+            ),
+          ).timeout(
+            const Duration(seconds: 4),
+            onTimeout: () => false,
+          );
+          if (printed) {
+            debugPrint('Receipt directly printed to ${targetPrinter.name}');
+            return;
+          }
+        } catch (e) {
+          debugPrint('Direct print invocation error: $e');
+        }
+      }
+
+      debugPrint('No direct thermal printer available for headless print.');
     } catch (e) {
       debugPrint('Direct print attempt info: $e');
     }
-
-    // Fallback if direct printer is unavailable
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
-      name: documentName,
-    );
   }
 
   static Future<void> printShiftSummary({
     required ShiftModel shift,
     required StoreSettingsModel settings,
   }) async {
-    final doc = pw.Document();
-    final font = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
+    try {
+      final doc = pw.Document();
+      final font = await getCairoRegular();
+      final fontBold = await getCairoBold();
 
-    doc.addPage(
-      pw.Page(
-        pageFormat: thermalRoll80,
-        textDirection: pw.TextDirection.rtl,
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
-        build: (pw.Context context) {
-          return pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      doc.addPage(
+        pw.Page(
+          pageFormat: thermalRoll80,
+          textDirection: pw.TextDirection.rtl,
+          theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+          build: (pw.Context context) {
+            return pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
@@ -517,7 +601,10 @@ class PrintService {
       ),
     );
 
-    await _printDocumentDirectly(doc, 'Shift_${shift.id}');
+      await _printDocumentDirectly(doc, 'Shift_${shift.id}');
+    } catch (e) {
+      debugPrint('Error during printShiftSummary execution: $e');
+    }
   }
 
   static pw.Widget _buildShiftRow(
@@ -554,15 +641,8 @@ class PrintService {
     required String periodLabel,
   }) async {
     final doc = pw.Document();
-    pw.Font font;
-    pw.Font fontBold;
-    try {
-      font = await PdfGoogleFonts.cairoRegular();
-      fontBold = await PdfGoogleFonts.cairoBold();
-    } catch (_) {
-      font = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-    }
+    final font = await getCairoRegular();
+    final fontBold = await getCairoBold();
 
     final totalSales = (financialStats['total_sales'] as num?)?.toDouble() ?? 0.0;
     final totalOrders = (financialStats['total_orders'] as int?) ?? 0;
@@ -951,15 +1031,8 @@ class PrintService {
     String? searchQuery,
   }) async {
     final doc = pw.Document();
-    pw.Font font;
-    pw.Font fontBold;
-    try {
-      font = await PdfGoogleFonts.cairoRegular();
-      fontBold = await PdfGoogleFonts.cairoBold();
-    } catch (_) {
-      font = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-    }
+    final font = await getCairoRegular();
+    final fontBold = await getCairoBold();
 
     final totalProducts = products.length;
     final totalVariants = products.fold(0, (sum, p) => sum + p.variants.length);

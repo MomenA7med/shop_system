@@ -10,6 +10,7 @@ import 'core/constants/app_strings.dart';
 import 'core/constants/app_styles.dart';
 import 'core/database/database_helper.dart';
 import 'core/services/app_info_service.dart';
+import 'core/services/print_service.dart';
 import 'models/store_settings_model.dart';
 import 'providers/auth_provider.dart';
 import 'providers/inventory_provider.dart';
@@ -72,6 +73,9 @@ void main() async {
     // Pre-initialize database & schema migrations
     await DatabaseHelper.instance.database;
     await DatabaseHelper.instance.ensureSchemaMigrations();
+
+    // Warm up PDF fonts in the background so receipt printing is instant and non-blocking
+    PrintService.warmUpFonts();
 
     // Pre-load store settings to establish theme before first frame renders
     try {
