@@ -537,10 +537,10 @@ class _CartPanelState extends State<CartPanel> {
     _syncPaidAmount(pos);
 
     final screenWidth = MediaQuery.of(context).size.width;
-    // Spacious comfortable panel width for supermarket invoice viewing
+    // Spacious wide panel width for supermarket view
     final panelWidth = screenWidth < 1100
-        ? 430.0
-        : (screenWidth < 1400 ? 490.0 : 560.0);
+        ? 480.0
+        : (screenWidth < 1400 ? 560.0 : 640.0);
 
     return Container(
       width: panelWidth,
@@ -552,49 +552,49 @@ class _CartPanelState extends State<CartPanel> {
         children: [
           // 1. Cart Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 28,
+                      height: 28,
                       padding: EdgeInsets.all(
                         settings.logoPath != null &&
                                 File(settings.logoPath!).existsSync()
                             ? 2
-                            : 6,
+                            : 5,
                       ),
                       decoration: BoxDecoration(
                         color: colors.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child:
                           settings.logoPath != null &&
                               File(settings.logoPath!).existsSync()
                           ? ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(5),
                               child: Image.file(
                                 File(settings.logoPath!),
-                                width: 26,
-                                height: 26,
+                                width: 22,
+                                height: 22,
                                 fit: BoxFit.contain,
                               ),
                             )
                           : Icon(
                               Icons.shopping_cart_outlined,
-                              size: 20,
+                              size: 17,
                               color: colors.primary,
                             ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Text(
                       '${AppStrings.currentOrder} (${cartItems.length})',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                        fontSize: 14,
                         color: colors.textPrimary,
                       ),
                     ),
@@ -605,15 +605,15 @@ class _CartPanelState extends State<CartPanel> {
                     style: TextButton.styleFrom(
                       foregroundColor: colors.error,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 6,
+                        vertical: 2,
                       ),
                     ),
-                    icon: const Icon(Icons.delete_sweep, size: 18),
+                    icon: const Icon(Icons.delete_sweep, size: 16),
                     label: const Text(
                       'مسح السلة',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -629,7 +629,7 @@ class _CartPanelState extends State<CartPanel> {
           ),
           Divider(color: colors.border, height: 1),
 
-          // 2. Cart Items List (The Classic List with supermarket weight/quantity controls)
+          // 2. Cart Items List (Ultra-Compact Single-Row Table Layout for Supermarkets)
           Expanded(
             child: cartItems.isEmpty
                 ? Center(
@@ -638,10 +638,10 @@ class _CartPanelState extends State<CartPanel> {
                       children: [
                         Icon(
                           Icons.shopping_cart_outlined,
-                          size: 54,
+                          size: 48,
                           color: colors.textMuted.withValues(alpha: 0.35),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Text(
@@ -649,7 +649,7 @@ class _CartPanelState extends State<CartPanel> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: colors.textMuted,
-                              fontSize: 13,
+                              fontSize: 12.5,
                             ),
                           ),
                         ),
@@ -659,10 +659,10 @@ class _CartPanelState extends State<CartPanel> {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 6,
+                      vertical: 4,
                     ),
                     itemCount: cartItems.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 5),
+                    separatorBuilder: (_, _) => const SizedBox(height: 3),
                     itemBuilder: (context, index) {
                       final item = cartItems[index];
                       final hasDesc = item.color.isNotEmpty &&
@@ -677,286 +677,242 @@ class _CartPanelState extends State<CartPanel> {
                       return Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
-                          vertical: 6,
+                          vertical: 4,
                         ),
                         decoration: BoxDecoration(
                           color: colors.cardSurface,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: isMaxReached
                                 ? colors.warning.withValues(alpha: 0.5)
-                                : colors.border.withValues(alpha: 0.8),
+                                : colors.border.withValues(alpha: 0.7),
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+                        child: Row(
                           children: [
-                            // Top Row: Product Name + Spec Badge + Line Total Price + Delete Icon
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          item.productName,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: colors.textPrimary,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                            // 1. Delete button
+                            InkWell(
+                              onTap: () => pos.removeItem(index),
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 14,
+                                  color: colors.error.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // 2. Product Name & Spec Badge
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      item.productName,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: colors.textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (specLabel.isNotEmpty &&
+                                      specLabel != 'افتراضي' &&
+                                      specLabel != '-') ...[
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colors.primary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          3,
                                         ),
                                       ),
-                                      if (specLabel.isNotEmpty &&
-                                          specLabel != 'افتراضي' &&
-                                          specLabel != '-') ...[
-                                        const SizedBox(width: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 1.5,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: colors.primary.withValues(
-                                              alpha: 0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              3,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            specLabel,
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: colors.isDark
-                                                  ? colors.primaryLight
-                                                  : colors.primaryDark,
-                                            ),
+                                      child: Text(
+                                        specLabel,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: colors.isDark
+                                              ? colors.primaryLight
+                                              : colors.primaryDark,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 3. Unit Price
+                            Text(
+                              CurrencyFormatter.format(
+                                item.unitPrice,
+                                symbol: settings.currencySymbol,
+                              ),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colors.textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 4. Stepper (- / qty / +)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.remove_circle_outline,
+                                    size: 16,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 22,
+                                    minHeight: 22,
+                                  ),
+                                  color: colors.textSecondary,
+                                  onPressed: () => pos.decrementQuantity(
+                                    index,
+                                    item.quantity <= 1.0 &&
+                                            item.quantity > 0.25
+                                        ? 0.25
+                                        : 1.0,
+                                  ),
+                                ),
+                                Tooltip(
+                                  message:
+                                      'اضغط لتعديل الوزن أو الكمية',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: () => _showWeightDialog(
+                                      context,
+                                      item,
+                                      index,
+                                      pos,
+                                      colors,
+                                      settings,
+                                    ),
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 34,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: colors.surface,
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: colors.primary.withValues(
+                                            alpha: 0.3,
                                           ),
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  CurrencyFormatter.format(
-                                    item.totalPrice,
-                                    symbol: settings.currencySymbol,
-                                  ),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: colors.isDark
-                                        ? colors.primaryLight
-                                        : colors.primaryDark,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                InkWell(
-                                  onTap: () => pos.removeItem(index),
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(2),
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 15,
-                                      color: colors.error.withValues(
-                                        alpha: 0.8,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            NumberParser.formatQuantity(
+                                              item.quantity,
+                                            ),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                              color: colors.textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 1),
+                                          Icon(
+                                            Icons.scale_rounded,
+                                            size: 10,
+                                            color: colors.primary,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.add_circle_outline,
+                                    size: 16,
+                                    color: isMaxReached
+                                        ? colors.textMuted.withValues(
+                                            alpha: 0.35,
+                                          )
+                                        : colors.primary,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 22,
+                                    minHeight: 22,
+                                  ),
+                                  onPressed: isMaxReached
+                                      ? () {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'عفواً، لا يمكن زيادة الكمية؛ المتاح بالمخزون هو (${NumberParser.formatQuantity(maxStock)}) فقط!',
+                                              ),
+                                              backgroundColor:
+                                                  colors.warning,
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              duration: const Duration(
+                                                seconds: 2,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : () => pos.incrementQuantity(
+                                          index,
+                                          item.quantity < 1.0 ? 0.25 : 1.0,
+                                        ),
                                 ),
                               ],
                             ),
+                            const SizedBox(width: 8),
 
-                            const SizedBox(height: 4),
-
-                            // Bottom Row: Unit Price / Stock badge + Stepper (- / qty / +)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      CurrencyFormatter.format(
-                                        item.unitPrice,
-                                        symbol: settings.currencySymbol,
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: colors.textMuted,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (isMaxReached) ...[
-                                      const SizedBox(width: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                          vertical: 1,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: colors.warning.withValues(
-                                            alpha: 0.15,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            3,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'أقصى مخزون',
-                                          style: TextStyle(
-                                            fontSize: 8.5,
-                                            fontWeight: FontWeight.bold,
-                                            color: colors.warning,
-                                          ),
-                                        ),
-                                      ),
-                                    ] else ...[
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '• المتاح: ${NumberParser.formatQuantity(maxStock)}',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: colors.textMuted.withValues(
-                                            alpha: 0.7,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                            // 5. Line Total
+                            SizedBox(
+                              width: 72,
+                              child: Text(
+                                CurrencyFormatter.format(
+                                  item.totalPrice,
+                                  symbol: settings.currencySymbol,
                                 ),
-
-                                // Compact Stepper
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                        size: 18,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 24,
-                                        minHeight: 24,
-                                      ),
-                                      color: colors.textSecondary,
-                                      onPressed: () => pos.decrementQuantity(
-                                        index,
-                                        item.quantity <= 1.0 &&
-                                                item.quantity > 0.25
-                                            ? 0.25
-                                            : 1.0,
-                                      ),
-                                    ),
-                                    Tooltip(
-                                      message:
-                                          'اضغط لتعديل الوزن أو الكمية (أوزان سريعة)',
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(4),
-                                        onTap: () => _showWeightDialog(
-                                          context,
-                                          item,
-                                          index,
-                                          pos,
-                                          colors,
-                                          settings,
-                                        ),
-                                        child: Container(
-                                          constraints: const BoxConstraints(
-                                            minWidth: 38,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: colors.surface,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                            border: Border.all(
-                                              color: colors.primary.withValues(
-                                                alpha: 0.3,
-                                              ),
-                                            ),
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                NumberParser.formatQuantity(
-                                                  item.quantity,
-                                                ),
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 11.5,
-                                                  color: colors.textPrimary,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 2),
-                                              Icon(
-                                                Icons.scale_rounded,
-                                                size: 11,
-                                                color: colors.primary,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.add_circle_outline,
-                                        size: 18,
-                                        color: isMaxReached
-                                            ? colors.textMuted.withValues(
-                                                alpha: 0.35,
-                                              )
-                                            : colors.primary,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 24,
-                                        minHeight: 24,
-                                      ),
-                                      onPressed: isMaxReached
-                                          ? () {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).hideCurrentSnackBar();
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'عفواً، لا يمكن زيادة الكمية؛ المتاح بالمخزون هو (${NumberParser.formatQuantity(maxStock)}) فقط!',
-                                                  ),
-                                                  backgroundColor:
-                                                      colors.warning,
-                                                  behavior:
-                                                      SnackBarBehavior.floating,
-                                                  duration: const Duration(
-                                                    seconds: 2,
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          : () => pos.incrementQuantity(
-                                              index,
-                                              item.quantity < 1.0 ? 0.25 : 1.0,
-                                            ),
-                                    ),
-                                  ],
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  color: colors.isDark
+                                      ? colors.primaryLight
+                                      : colors.primaryDark,
                                 ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
