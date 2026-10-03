@@ -659,10 +659,10 @@ class _CartPanelState extends State<CartPanel> {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 4,
+                      vertical: 6,
                     ),
                     itemCount: cartItems.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 3),
+                    separatorBuilder: (_, _) => const SizedBox(height: 5),
                     itemBuilder: (context, index) {
                       final item = cartItems[index];
                       final hasDesc = item.color.isNotEmpty &&
@@ -676,16 +676,16 @@ class _CartPanelState extends State<CartPanel> {
 
                       return Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 10,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
                           color: colors.cardSurface,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isMaxReached
                                 ? colors.warning.withValues(alpha: 0.5)
-                                : colors.border.withValues(alpha: 0.7),
+                                : colors.border.withValues(alpha: 0.8),
                           ),
                         ),
                         child: Row(
@@ -695,10 +695,10 @@ class _CartPanelState extends State<CartPanel> {
                               onTap: () => pos.removeItem(index),
                               borderRadius: BorderRadius.circular(4),
                               child: Padding(
-                                padding: const EdgeInsets.all(2),
+                                padding: const EdgeInsets.all(3),
                                 child: Icon(
                                   Icons.close,
-                                  size: 14,
+                                  size: 15,
                                   color: colors.error.withValues(
                                     alpha: 0.8,
                                   ),
@@ -716,7 +716,7 @@ class _CartPanelState extends State<CartPanel> {
                                       item.productName,
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 12.5,
+                                        fontSize: 13,
                                         color: colors.textPrimary,
                                       ),
                                       maxLines: 1,
@@ -729,21 +729,21 @@ class _CartPanelState extends State<CartPanel> {
                                     const SizedBox(width: 4),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 1,
+                                        horizontal: 5,
+                                        vertical: 1.5,
                                       ),
                                       decoration: BoxDecoration(
                                         color: colors.primary.withValues(
                                           alpha: 0.1,
                                         ),
                                         borderRadius: BorderRadius.circular(
-                                          3,
+                                          4,
                                         ),
                                       ),
                                       child: Text(
                                         specLabel,
                                         style: TextStyle(
-                                          fontSize: 9,
+                                          fontSize: 9.5,
                                           fontWeight: FontWeight.bold,
                                           color: colors.isDark
                                               ? colors.primaryLight
@@ -764,7 +764,7 @@ class _CartPanelState extends State<CartPanel> {
                                 symbol: settings.currencySymbol,
                               ),
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 11.5,
                                 color: colors.textMuted,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -778,12 +778,12 @@ class _CartPanelState extends State<CartPanel> {
                                 IconButton(
                                   icon: const Icon(
                                     Icons.remove_circle_outline,
-                                    size: 16,
+                                    size: 17,
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 22,
-                                    minHeight: 22,
+                                    minWidth: 26,
+                                    minHeight: 26,
                                   ),
                                   color: colors.textSecondary,
                                   onPressed: () => pos.decrementQuantity(
@@ -809,11 +809,11 @@ class _CartPanelState extends State<CartPanel> {
                                     ),
                                     child: Container(
                                       constraints: const BoxConstraints(
-                                        minWidth: 34,
+                                        minWidth: 38,
                                       ),
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 1.5,
+                                        horizontal: 6,
+                                        vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
                                         color: colors.surface,
@@ -835,14 +835,14 @@ class _CartPanelState extends State<CartPanel> {
                                             ),
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 11,
+                                              fontSize: 12,
                                               color: colors.textPrimary,
                                             ),
                                           ),
-                                          const SizedBox(width: 1),
+                                          const SizedBox(width: 2),
                                           Icon(
                                             Icons.scale_rounded,
-                                            size: 10,
+                                            size: 11,
                                             color: colors.primary,
                                           ),
                                         ],
@@ -853,7 +853,7 @@ class _CartPanelState extends State<CartPanel> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.add_circle_outline,
-                                    size: 16,
+                                    size: 17,
                                     color: isMaxReached
                                         ? colors.textMuted.withValues(
                                             alpha: 0.35,
@@ -862,8 +862,8 @@ class _CartPanelState extends State<CartPanel> {
                                   ),
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(
-                                    minWidth: 22,
-                                    minHeight: 22,
+                                    minWidth: 26,
+                                    minHeight: 26,
                                   ),
                                   onPressed: isMaxReached
                                       ? () {
@@ -898,7 +898,7 @@ class _CartPanelState extends State<CartPanel> {
 
                             // 5. Line Total
                             SizedBox(
-                              width: 72,
+                              width: 76,
                               child: Text(
                                 CurrencyFormatter.format(
                                   item.totalPrice,
@@ -907,7 +907,7 @@ class _CartPanelState extends State<CartPanel> {
                                 textAlign: TextAlign.end,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
+                                  fontSize: 13,
                                   color: colors.isDark
                                       ? colors.primaryLight
                                       : colors.primaryDark,
