@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -14,14 +15,14 @@ import '../utils/currency_formatter.dart';
 import '../utils/date_formatter.dart';
 
 class PrintService {
-  // Safe 80mm thermal page format with hardware margin clearance (prevents edge clipping)
+  // Safe 80mm thermal page format with hardware margin clearance (prevents right/left edge clipping)
   static const PdfPageFormat thermalRoll80 = PdfPageFormat(
     80 * PdfPageFormat.mm,
     double.infinity,
-    marginLeft: 6 * PdfPageFormat.mm,
-    marginRight: 6 * PdfPageFormat.mm,
+    marginLeft: 5 * PdfPageFormat.mm,
+    marginRight: 9 * PdfPageFormat.mm,
     marginTop: 4 * PdfPageFormat.mm,
-    marginBottom: 12 * PdfPageFormat.mm,
+    marginBottom: 15 * PdfPageFormat.mm,
   );
 
   static pw.Font? _cachedFont;
@@ -41,20 +42,34 @@ class PrintService {
   static Future<pw.Font> getFont() async {
     if (_cachedFont != null) return _cachedFont!;
     try {
-      _cachedFont = await PdfGoogleFonts.cairoRegular().timeout(const Duration(seconds: 3));
+      final fontData = await rootBundle.load('assets/fonts/Cairo-Regular.ttf');
+      _cachedFont = pw.Font.ttf(fontData);
       return _cachedFont!;
-    } catch (_) {
-      return pw.Font.helvetica();
+    } catch (e) {
+      debugPrint('Error loading asset font: $e');
+      try {
+        _cachedFont = await PdfGoogleFonts.cairoRegular().timeout(const Duration(seconds: 3));
+        return _cachedFont!;
+      } catch (_) {
+        return pw.Font.helvetica();
+      }
     }
   }
 
   static Future<pw.Font> getFontBold() async {
     if (_cachedFontBold != null) return _cachedFontBold!;
     try {
-      _cachedFontBold = await PdfGoogleFonts.cairoBold().timeout(const Duration(seconds: 3));
+      final fontData = await rootBundle.load('assets/fonts/Cairo-Bold.ttf');
+      _cachedFontBold = pw.Font.ttf(fontData);
       return _cachedFontBold!;
-    } catch (_) {
-      return pw.Font.helveticaBold();
+    } catch (e) {
+      debugPrint('Error loading asset bold font: $e');
+      try {
+        _cachedFontBold = await PdfGoogleFonts.cairoBold().timeout(const Duration(seconds: 3));
+        return _cachedFontBold!;
+      } catch (_) {
+        return pw.Font.helveticaBold();
+      }
     }
   }
 
@@ -73,7 +88,7 @@ class PrintService {
         theme: pw.ThemeData.withFont(base: font, bold: fontBold),
         build: (pw.Context context) {
           return pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
@@ -460,7 +475,7 @@ class PrintService {
         theme: pw.ThemeData.withFont(base: font, bold: fontBold),
         build: (pw.Context context) {
           return pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [

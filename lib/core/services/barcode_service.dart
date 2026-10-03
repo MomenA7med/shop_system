@@ -34,7 +34,7 @@ class BarcodeService {
     for (int i = 0; i < copies; i++) {
       doc.addPage(
         pw.Page(
-          pageFormat: const PdfPageFormat(labelWidth, labelHeight, marginAll: 2 * PdfPageFormat.mm),
+          pageFormat: const PdfPageFormat(labelWidth, labelHeight, marginAll: 3 * PdfPageFormat.mm),
           textDirection: pw.TextDirection.rtl,
           theme: pw.ThemeData.withFont(base: font, bold: fontBold),
           build: (pw.Context context) {
@@ -43,7 +43,7 @@ class BarcodeService {
                 border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
                 borderRadius: pw.BorderRadius.circular(4),
               ),
-              padding: const pw.EdgeInsets.all(3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: pw.Column(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
