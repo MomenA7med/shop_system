@@ -853,5 +853,113 @@ void main() {
     expect(find.text(AppStrings.storeSettings), findsOneWidget);
     expect(find.text('شعار المتجر (Logo)'), findsOneWidget);
     expect(find.text('اختيار شعار للمحل'), findsOneWidget);
+    expect(find.text('الموسم / الكولكشن النشط للمتجر'), findsOneWidget);
+  });
+
+  test('ProductModel handles season field serialization and copyWith', () {
+    final product = ProductModel(
+      categoryId: 1,
+      name: 'قميص صيفي قطن',
+      season: 'summer',
+    );
+
+    expect(product.season, 'summer');
+    expect(product.seasonLabel, 'صيفي');
+
+    final map = product.toMap();
+    expect(map['season'], 'summer');
+
+    final reconstructed = ProductModel.fromMap(map);
+    expect(reconstructed.season, 'summer');
+    expect(reconstructed.name, 'قميص صيفي قطن');
+
+    final winterProduct = product.copyWith(season: 'winter');
+    expect(winterProduct.season, 'winter');
+    expect(winterProduct.seasonLabel, 'شتوي');
+
+    final allProduct = product.copyWith(season: 'all');
+    expect(allProduct.season, 'all');
+    expect(allProduct.seasonLabel, 'عام');
+  });
+
+  test('StoreSettingsModel handles activeCollection serialization and copyWith', () {
+    final settings = StoreSettingsModel(
+      storeName: 'متجر الملابس',
+      slogan: 'شعار',
+      phone: '010',
+      address: 'عنوان',
+      activeCollection: 'winter',
+    );
+
+    expect(settings.activeCollection, 'winter');
+    expect(settings.activeCollectionLabel, 'شتوي');
+
+    final map = settings.toMap();
+    expect(map['active_collection'], 'winter');
+
+    final reconstructed = StoreSettingsModel.fromMap(map);
+    expect(reconstructed.activeCollection, 'winter');
+    expect(reconstructed.activeCollectionLabel, 'شتوي');
+
+    final summerSettings = reconstructed.copyWith(activeCollection: 'summer');
+    expect(summerSettings.activeCollection, 'summer');
+    expect(summerSettings.activeCollectionLabel, 'صيفي');
+
+    final allSettings = reconstructed.copyWith(activeCollection: 'all');
+    expect(allSettings.activeCollection, 'all');
+    expect(allSettings.activeCollectionLabel, 'عام (الكل)');
+  });
+
+  test('PrintService builds receipt document and handles direct print gracefully', () async {
+    final settings = StoreSettingsModel(
+      storeName: 'متجر الملابس',
+      slogan: 'أفضل الخامات',
+      phone: '01012345678',
+      address: 'القاهرة',
+    );
+
+    final order = OrderModel(
+      id: 1,
+      invoiceNumber: 'INV-2026-001',
+      cashierId: 1,
+      cashierName: 'الكاشير',
+      shiftId: 1,
+      totalAmount: 350.0,
+      amountPaid: 400.0,
+      changeDue: 50.0,
+      status: 'completed',
+      createdAt: DateTime.now(),
+      items: [
+        OrderItemModel(
+          id: 1,
+          orderId: 1,
+          variantId: 1,
+          productId: 1,
+          productName: 'بنطلون جينز',
+          size: '32',
+          color: 'أزرق',
+          skuBarcode: 'JNZ-32',
+          quantity: 1,
+          unitPrice: 350.0,
+          costPrice: 200.0,
+        ),
+      ],
+    );
+
+    final doc = await PrintService.buildReceiptDocument(
+      order: order,
+      settings: settings,
+    );
+    final pdfBytes = await doc.save();
+    expect(pdfBytes.isNotEmpty, true);
+    expect(pdfBytes.length > 50, true);
+
+    // directPrintReceipt should execute without uncaught exceptions or freezing
+    final result = await PrintService.directPrintReceipt(
+      order: order,
+      settings: settings,
+    );
+    // In headless test without CUPS configured, returns false gracefully
+    expect(result, isFalse);
   });
 }

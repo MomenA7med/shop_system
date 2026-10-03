@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/services/print_service.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/number_parser.dart';
 import '../../models/product_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inventory_provider.dart';
@@ -331,31 +332,10 @@ class _InventoryViewState extends State<InventoryView> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: colors.border),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'البحث عن منتج، باركود، مقاس أو لون...',
-                        prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 16),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  inventory.setSearchQuery('');
-                                },
-                              )
-                            : null,
-                      ),
-                      onChanged: (val) => inventory.setSearchQuery(val),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Category Dropdown Filter
-                  DropdownButton<int?>(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 700;
+                  final categoryDropdown = DropdownButton<int?>(
                     value: inventory.categories.any((c) => c.id == inventory.selectedCategoryId)
                         ? inventory.selectedCategoryId
                         : null,
@@ -373,8 +353,93 @@ class _InventoryViewState extends State<InventoryView> {
                       )),
                     ],
                     onChanged: (val) => inventory.selectCategory(val),
-                  ),
-                ],
+                  );
+
+                  final seasonDropdown = DropdownButton<String>(
+                    value: inventory.selectedSeason,
+                    dropdownColor: colors.surface,
+                    underline: const SizedBox(),
+                    items: [
+                      DropdownMenuItem<String>(
+                        value: 'active',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check_circle_outline, size: 14, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text('النشط (${settings.activeCollectionLabel})'),
+                          ],
+                        ),
+                      ),
+                      const DropdownMenuItem<String>(
+                        value: 'summer',
+                        child: Text('صيفي ☀️'),
+                      ),
+                      const DropdownMenuItem<String>(
+                        value: 'winter',
+                        child: Text('شتوي ❄️'),
+                      ),
+                      const DropdownMenuItem<String>(
+                        value: 'general',
+                        child: Text('عام 🌐'),
+                      ),
+                      const DropdownMenuItem<String>(
+                        value: 'all',
+                        child: Text('الكل'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) inventory.selectSeason(val);
+                    },
+                  );
+
+                  final searchField = TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'البحث عن منتج، باركود، مقاس أو لون...',
+                      prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 16),
+                              onPressed: () {
+                                _searchController.clear();
+                                inventory.setSearchQuery('');
+                              },
+                            )
+                          : null,
+                    ),
+                    onChanged: (val) => inventory.setSearchQuery(NumberParser.normalize(val)),
+                  );
+
+                  if (isNarrow) {
+                    return Column(
+                      children: [
+                        searchField,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: categoryDropdown),
+                            const SizedBox(width: 12),
+                            Expanded(child: seasonDropdown),
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: searchField,
+                      ),
+                      const SizedBox(width: 16),
+                      categoryDropdown,
+                      const SizedBox(width: 16),
+                      seasonDropdown,
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -555,12 +620,40 @@ class _InventoryViewState extends State<InventoryView> {
             ),
           ),
 
-          // Category
+          // Category & Season
           Expanded(
             flex: 2,
-            child: Text(
-              product.categoryName ?? '-',
-              style: TextStyle(fontSize: 12, color: colors.textSecondary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  product.categoryName ?? '-',
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: product.season == 'summer'
+                        ? Colors.orange.withValues(alpha: 0.15)
+                        : (product.season == 'winter'
+                            ? Colors.lightBlue.withValues(alpha: 0.15)
+                            : colors.primary.withValues(alpha: 0.12)),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    product.seasonLabel,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: product.season == 'summer'
+                          ? Colors.orangeAccent
+                          : (product.season == 'winter' ? Colors.lightBlueAccent : colors.primaryLight),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 

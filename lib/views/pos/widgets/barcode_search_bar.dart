@@ -121,10 +121,11 @@ class _BarcodeSearchBarState extends State<BarcodeSearchBar> {
                     : null,
               ),
               onChanged: (val) {
-                if (val.isEmpty) {
+                final normalized = NumberParser.normalize(val);
+                if (normalized.isEmpty) {
                   pos.clearSearch();
                 } else {
-                  pos.setSearchQuery(val);
+                  pos.setSearchQuery(normalized);
                 }
               },
               onSubmitted: _onSubmitted,

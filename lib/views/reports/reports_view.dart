@@ -366,7 +366,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
               separatorBuilder: (_, _) => Divider(color: colors.border),
               itemBuilder: (context, index) {
                 final item = reports.topProducts[index];
-                final soldQty = item['total_sold_qty'] as int? ?? 0;
+                final soldQty = (item['total_sold_qty'] as num?)?.toInt() ?? 0;
                 final revenue = (item['total_revenue'] as num?)?.toDouble() ?? 0.0;
 
                 return Row(
@@ -418,7 +418,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
               itemBuilder: (context, index) {
                 final item = reports.categorySales[index];
                 final categoryName = item['category_name'] as String? ?? 'عام';
-                final soldQty = item['total_sold_qty'] as int? ?? 0;
+                final soldQty = (item['total_sold_qty'] as num?)?.toInt() ?? 0;
                 final revenue = (item['total_revenue'] as num?)?.toDouble() ?? 0.0;
                 final percentage = reports.totalSales > 0 ? (revenue / reports.totalSales) * 100 : 0.0;
 

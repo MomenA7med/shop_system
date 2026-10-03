@@ -65,11 +65,11 @@ class OrderModel {
 
   factory OrderModel.fromMap(Map<String, dynamic> map, {List<OrderItemModel>? items, String? cashierName}) {
     return OrderModel(
-      id: map['id'] as int?,
+      id: (map['id'] as num?)?.toInt(),
       invoiceNumber: map['invoice_number'] as String,
-      cashierId: map['cashier_id'] as int,
+      cashierId: (map['cashier_id'] as num).toInt(),
       cashierName: cashierName ?? map['cashier_name'] as String?,
-      shiftId: map['shift_id'] as int?,
+      shiftId: (map['shift_id'] as num?)?.toInt(),
       totalAmount: (map['total_amount'] as num).toDouble(),
       amountPaid: (map['amount_paid'] as num).toDouble(),
       changeDue: (map['change_due'] as num).toDouble(),

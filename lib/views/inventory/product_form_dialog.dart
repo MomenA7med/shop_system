@@ -64,6 +64,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _defaultMinAlertController = TextEditingController(text: '2');
   int? _selectedCategoryId;
+  String _selectedSeason = 'all';
   final List<_VariantEntry> _variants = [];
   bool _isSaving = false;
 
@@ -75,6 +76,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       _nameController.text = p.name;
       _descController.text = p.description;
       _selectedCategoryId = p.categoryId;
+      _selectedSeason = p.season;
 
       if (p.variants.isNotEmpty) {
         _defaultMinAlertController.text = p.variants.first.minStockAlert.toString();
@@ -103,14 +105,29 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
       final alertVal = _defaultMinAlertController.text.trim().isNotEmpty
           ? _defaultMinAlertController.text.trim()
           : '2';
-      _variants.add(_VariantEntry(
-        size: 'M',
-        color: 'أسود',
-        cost: '100',
-        price: '180',
-        stock: '10',
-        minAlert: alertVal,
-      ));
+
+      if (_variants.isNotEmpty) {
+        final last = _variants.last;
+        _variants.add(_VariantEntry(
+          size: last.sizeCtrl.text,
+          color: last.colorCtrl.text,
+          cost: last.costCtrl.text,
+          price: last.priceCtrl.text,
+          stock: last.stockCtrl.text,
+          minAlert: last.minAlertCtrl.text.isNotEmpty ? last.minAlertCtrl.text : alertVal,
+          barcode: BarcodeService.generateUniqueBarcode(),
+        ));
+      } else {
+        _variants.add(_VariantEntry(
+          size: 'M',
+          color: 'أسود',
+          cost: '100',
+          price: '180',
+          stock: '10',
+          minAlert: alertVal,
+          barcode: BarcodeService.generateUniqueBarcode(),
+        ));
+      }
     });
   }
 
@@ -169,6 +186,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
         categoryId: _selectedCategoryId!,
         name: _nameController.text.trim(),
         description: _descController.text.trim(),
+        season: _selectedSeason,
       );
 
       final variantsList = _variants.map((v) {
@@ -299,6 +317,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
+                            isExpanded: true,
                             initialValue: categories.any((c) => c.id == _selectedCategoryId)
                                 ? _selectedCategoryId
                                 : (categories.isNotEmpty ? categories.first.id : null),
@@ -327,6 +346,39 @@ class _ProductFormDialogState extends State<ProductFormDialog> {
                           },
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Season / Collection Selector
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: _selectedSeason,
+                      decoration: const InputDecoration(
+                        labelText: 'الكولكشن / الموسم',
+                        prefixIcon: Icon(Icons.style_outlined, size: 18, color: AppColors.primary),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'all',
+                          child: Text('عام (صيف وشتاء / طوال العام) 🌐'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'summer',
+                          child: Text('صيفي فقط ☀️'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'winter',
+                          child: Text('شتوي فقط ❄️'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedSeason = val);
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 14),

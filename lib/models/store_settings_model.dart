@@ -8,6 +8,7 @@ class StoreSettingsModel {
   final String receiptFooter;
   final double taxRatePercent;
   final String themeMode; // 'dark', 'light', 'system'
+  final String activeCollection; // 'all', 'summer', 'winter'
   final String? logoPath;
 
   StoreSettingsModel({
@@ -20,8 +21,21 @@ class StoreSettingsModel {
     this.receiptFooter = 'شكراً لزيارتكم! البضاعة المباعة ترد وتستبدل خلال 14 يوماً مع أصل الفاتورة',
     this.taxRatePercent = 0.0,
     this.themeMode = 'dark',
+    this.activeCollection = 'all',
     this.logoPath,
   });
+
+  String get activeCollectionLabel {
+    switch (activeCollection) {
+      case 'summer':
+        return 'صيفي';
+      case 'winter':
+        return 'شتوي';
+      case 'all':
+      default:
+        return 'عام (الكل)';
+    }
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -34,13 +48,14 @@ class StoreSettingsModel {
       'receipt_footer': receiptFooter,
       'tax_rate_percent': taxRatePercent,
       'theme_mode': themeMode,
+      'active_collection': activeCollection,
       'logo_path': logoPath,
     };
   }
 
   factory StoreSettingsModel.fromMap(Map<String, dynamic> map) {
     return StoreSettingsModel(
-      id: map['id'] as int? ?? 1,
+      id: (map['id'] as num?)?.toInt() ?? 1,
       storeName: map['store_name'] as String? ?? 'محل الأزياء والأناقة',
       slogan: map['slogan'] as String? ?? 'أحدث صيحات الملابس والموضة',
       phone: map['phone'] as String? ?? '01000000000',
@@ -49,6 +64,7 @@ class StoreSettingsModel {
       receiptFooter: map['receipt_footer'] as String? ?? 'شكراً لزيارتكم! البضاعة المباعة ترد وتستبدل خلال 14 يوماً مع الفاتورة',
       taxRatePercent: (map['tax_rate_percent'] as num?)?.toDouble() ?? 0.0,
       themeMode: map['theme_mode'] as String? ?? 'dark',
+      activeCollection: map['active_collection'] as String? ?? 'all',
       logoPath: map['logo_path'] as String?,
     );
   }
@@ -62,6 +78,7 @@ class StoreSettingsModel {
     String? receiptFooter,
     double? taxRatePercent,
     String? themeMode,
+    String? activeCollection,
     String? logoPath,
     bool clearLogo = false,
   }) {
@@ -75,6 +92,7 @@ class StoreSettingsModel {
       receiptFooter: receiptFooter ?? this.receiptFooter,
       taxRatePercent: taxRatePercent ?? this.taxRatePercent,
       themeMode: themeMode ?? this.themeMode,
+      activeCollection: activeCollection ?? this.activeCollection,
       logoPath: clearLogo ? null : (logoPath ?? this.logoPath),
     );
   }
@@ -92,6 +110,7 @@ class StoreSettingsModel {
         other.receiptFooter == receiptFooter &&
         other.taxRatePercent == taxRatePercent &&
         other.themeMode == themeMode &&
+        other.activeCollection == activeCollection &&
         other.logoPath == logoPath;
   }
 
@@ -106,6 +125,7 @@ class StoreSettingsModel {
         receiptFooter,
         taxRatePercent,
         themeMode,
+        activeCollection,
         logoPath,
       );
 }

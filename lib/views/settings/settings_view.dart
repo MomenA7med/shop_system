@@ -12,6 +12,8 @@ import '../../core/utils/number_parser.dart';
 import '../../models/store_settings_model.dart';
 import '../../models/user_model.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/pos_provider.dart';
+import '../../providers/inventory_provider.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -37,6 +39,7 @@ class _SettingsViewState extends State<SettingsView> {
   final FocusNode _footerFocus = FocusNode();
 
   String? _selectedLogoPath;
+  String _activeCollection = 'all';
   StoreSettingsModel? _lastSyncedSettings;
   bool _isSaving = false;
   String? _backupStatus;
@@ -52,6 +55,7 @@ class _SettingsViewState extends State<SettingsView> {
     _currencyCtrl = TextEditingController(text: settings.currencySymbol);
     _footerCtrl = TextEditingController(text: settings.receiptFooter);
     _selectedLogoPath = settings.logoPath;
+    _activeCollection = settings.activeCollection;
     _lastSyncedSettings = settings;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,6 +80,7 @@ class _SettingsViewState extends State<SettingsView> {
         !_currencyFocus.hasFocus &&
         !_footerFocus.hasFocus) {
       _selectedLogoPath = settings.logoPath;
+      _activeCollection = settings.activeCollection;
     }
   }
 
@@ -157,6 +162,7 @@ class _SettingsViewState extends State<SettingsView> {
       address: _addressCtrl.text.trim(),
       currencySymbol: _currencyCtrl.text.trim(),
       receiptFooter: _footerCtrl.text.trim(),
+      activeCollection: _activeCollection,
       logoPath: _selectedLogoPath,
       clearLogo: _selectedLogoPath == null,
     );
@@ -164,6 +170,8 @@ class _SettingsViewState extends State<SettingsView> {
     _lastSyncedSettings = updated;
     final success = await settingsProvider.updateSettings(updated);
     if (mounted) {
+      context.read<POSProvider>().loadPOSData();
+      context.read<InventoryProvider>().loadInventory();
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -743,6 +751,44 @@ class _SettingsViewState extends State<SettingsView> {
                       decoration: const InputDecoration(
                         labelText: AppStrings.receiptFooter,
                       ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Active Collection Selector
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: _activeCollection,
+                      decoration: const InputDecoration(
+                        labelText: 'الموسم / الكولكشن النشط للمتجر',
+                        helperText:
+                            'يحدد المنتجات المعروضة في نقطة البيع (الكاشير) والمخزون',
+                        prefixIcon: Icon(
+                          Icons.style_outlined,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'all',
+                          child: Text(
+                            'الكل / شامل (عرض كل المنتجات: الصيفي والشتوي والعام)',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'summer',
+                          child: Text('كولكشن صيفي ☀️'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'winter',
+                          child: Text('كولكشن شتوي ❄️'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _activeCollection = val);
+                        }
+                      },
                     ),
 
                     const SizedBox(height: 16),

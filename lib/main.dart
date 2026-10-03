@@ -9,6 +9,7 @@ import 'core/constants/app_strings.dart';
 import 'core/constants/app_styles.dart';
 import 'core/database/database_helper.dart';
 import 'core/services/app_info_service.dart';
+import 'core/services/print_service.dart';
 import 'models/store_settings_model.dart';
 import 'providers/auth_provider.dart';
 import 'providers/inventory_provider.dart';
@@ -24,6 +25,7 @@ import 'views/main_layout.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppInfoService.init();
+  PrintService.preloadFonts();
 
   // Suppress Flutter Desktop hardware keyboard sync assertion bug in debug mode
   FlutterError.onError = (FlutterErrorDetails details) {

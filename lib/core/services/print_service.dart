@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -24,13 +24,47 @@ class PrintService {
     marginBottom: 12 * PdfPageFormat.mm,
   );
 
-  static Future<void> printReceipt({
+  static pw.Font? _cachedFont;
+  static pw.Font? _cachedFontBold;
+
+  static void preloadFonts() {
+    getFont().catchError((e) {
+      debugPrint('Error preloading regular font: $e');
+      return pw.Font.helvetica();
+    });
+    getFontBold().catchError((e) {
+      debugPrint('Error preloading bold font: $e');
+      return pw.Font.helveticaBold();
+    });
+  }
+
+  static Future<pw.Font> getFont() async {
+    if (_cachedFont != null) return _cachedFont!;
+    try {
+      _cachedFont = await PdfGoogleFonts.cairoRegular().timeout(const Duration(seconds: 3));
+      return _cachedFont!;
+    } catch (_) {
+      return pw.Font.helvetica();
+    }
+  }
+
+  static Future<pw.Font> getFontBold() async {
+    if (_cachedFontBold != null) return _cachedFontBold!;
+    try {
+      _cachedFontBold = await PdfGoogleFonts.cairoBold().timeout(const Duration(seconds: 3));
+      return _cachedFontBold!;
+    } catch (_) {
+      return pw.Font.helveticaBold();
+    }
+  }
+
+  static Future<pw.Document> buildReceiptDocument({
     required OrderModel order,
     required StoreSettingsModel settings,
   }) async {
     final doc = pw.Document();
-    final font = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
+    final font = await getFont();
+    final fontBold = await getFontBold();
 
     doc.addPage(
       pw.Page(
@@ -337,11 +371,78 @@ class PrintService {
         },
       ),
     );
+    return doc;
+  }
 
+  static Future<void> printReceipt({
+    required OrderModel order,
+    required StoreSettingsModel settings,
+  }) async {
+    final doc = await buildReceiptDocument(order: order, settings: settings);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => doc.save(),
       name: 'Receipt_${order.invoiceNumber}',
     );
+  }
+
+  static Future<bool> directPrintReceipt({
+    required OrderModel order,
+    required StoreSettingsModel settings,
+  }) async {
+    try {
+      final doc = await buildReceiptDocument(order: order, settings: settings);
+      final pdfBytes = await doc.save();
+
+      // Desktop direct printing without showing dialog
+      if (!kIsWeb && (Platform.isMacOS || Platform.isLinux)) {
+        final lpstatResult = await Process.run('lpstat', ['-d']).timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => ProcessResult(0, 1, '', 'timeout'),
+        );
+        final stdoutText = lpstatResult.stdout.toString().trim();
+        if (stdoutText.contains('system default destination:') || stdoutText.contains('destination:')) {
+          final tempDir = Directory.systemTemp;
+          final tempFile = File(
+            '${tempDir.path}/receipt_${order.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf',
+          );
+          await tempFile.writeAsBytes(pdfBytes);
+          await Process.run('lpr', [tempFile.path]).timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => ProcessResult(0, 1, '', 'timeout'),
+          );
+          Future.delayed(const Duration(seconds: 5), () {
+            if (tempFile.existsSync()) {
+              try {
+                tempFile.deleteSync();
+              } catch (_) {}
+            }
+          });
+          return true;
+        } else {
+          debugPrint('No system default printer destination configured on system.');
+          return false;
+        }
+      } else if (!kIsWeb && Platform.isWindows) {
+        try {
+          final printers = await Printing.listPrinters().timeout(const Duration(seconds: 2));
+          if (printers.isNotEmpty) {
+            final defaultPrinter = printers.firstWhere((p) => p.isDefault, orElse: () => printers.first);
+            return await Future.value(Printing.directPrintPdf(
+              printer: defaultPrinter,
+              onLayout: (PdfPageFormat format) async => pdfBytes,
+              name: 'Receipt_${order.invoiceNumber}',
+            )).timeout(const Duration(seconds: 4));
+          }
+        } catch (e) {
+          debugPrint('Windows direct printing error: $e');
+          return false;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Direct print error: $e');
+      return false;
+    }
   }
 
   static Future<void> printShiftSummary({
@@ -349,8 +450,8 @@ class PrintService {
     required StoreSettingsModel settings,
   }) async {
     final doc = pw.Document();
-    final font = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
+    final font = await getFont();
+    final fontBold = await getFontBold();
 
     doc.addPage(
       pw.Page(
@@ -511,22 +612,15 @@ class PrintService {
     required String periodLabel,
   }) async {
     final doc = pw.Document();
-    pw.Font font;
-    pw.Font fontBold;
-    try {
-      font = await PdfGoogleFonts.cairoRegular();
-      fontBold = await PdfGoogleFonts.cairoBold();
-    } catch (_) {
-      font = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-    }
+    final font = await getFont();
+    final fontBold = await getFontBold();
 
     final totalSales = (financialStats['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalOrders = (financialStats['total_orders'] as int?) ?? 0;
+    final totalOrders = (financialStats['total_orders'] as num?)?.toInt() ?? 0;
     final cashSales = (financialStats['cash_sales'] as num?)?.toDouble() ?? 0.0;
     final cardSales = (financialStats['card_sales'] as num?)?.toDouble() ?? 0.0;
     final totalReturns = (financialStats['total_returns'] as num?)?.toDouble() ?? 0.0;
-    final returnCount = (financialStats['return_count'] as int?) ?? 0;
+    final returnCount = (financialStats['return_count'] as num?)?.toInt() ?? 0;
     final netProfit = (financialStats['net_profit'] as num?)?.toDouble() ?? 0.0;
     final totalCogs = (financialStats['total_cogs'] as num?)?.toDouble() ?? 0.0;
     final marginPct = totalSales > 0 ? (netProfit / totalSales) * 100 : 0.0;
@@ -715,7 +809,7 @@ class PrintService {
                 data: List.generate(categorySales.length, (i) {
                   final cat = categorySales[i];
                   final catRevenue = (cat['total_revenue'] as num?)?.toDouble() ?? 0.0;
-                  final catSoldQty = cat['total_sold_qty'] as int? ?? 0;
+                  final catSoldQty = (cat['total_sold_qty'] as num?)?.toInt() ?? 0;
                   final share = totalSales > 0 ? (catRevenue / totalSales) * 100 : 0.0;
                   return [
                     '${i + 1}',
@@ -759,7 +853,7 @@ class PrintService {
                 headers: ['#', 'اسم المنتج', 'المقاس واللون', 'الباركود', 'الكمية المباعة', 'إجمالي الإيراد'],
                 data: List.generate(topProducts.length, (i) {
                   final item = topProducts[i];
-                  final soldQty = item['total_sold_qty'] as int? ?? 0;
+                  final soldQty = (item['total_sold_qty'] as num?)?.toInt() ?? 0;
                   final revenue = (item['total_revenue'] as num?)?.toDouble() ?? 0.0;
                   return [
                     '${i + 1}',
@@ -908,15 +1002,8 @@ class PrintService {
     String? searchQuery,
   }) async {
     final doc = pw.Document();
-    pw.Font font;
-    pw.Font fontBold;
-    try {
-      font = await PdfGoogleFonts.cairoRegular();
-      fontBold = await PdfGoogleFonts.cairoBold();
-    } catch (_) {
-      font = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-    }
+    final font = await getFont();
+    final fontBold = await getFontBold();
 
     final totalProducts = products.length;
     final totalVariants = products.fold(0, (sum, p) => sum + p.variants.length);
@@ -1161,9 +1248,9 @@ class PrintService {
                     '${item['size']} - ${item['color']}',
                     item['sku_barcode'] as String,
                     '${item['stock_quantity']}',
-                    CurrencyFormatter.format(item['cost_price'] as double, symbol: settings.currencySymbol),
-                    CurrencyFormatter.format(item['selling_price'] as double, symbol: settings.currencySymbol),
-                    CurrencyFormatter.format(item['total_cost'] as double, symbol: settings.currencySymbol),
+                    CurrencyFormatter.format((item['cost_price'] as num?)?.toDouble() ?? 0.0, symbol: settings.currencySymbol),
+                    CurrencyFormatter.format((item['selling_price'] as num?)?.toDouble() ?? 0.0, symbol: settings.currencySymbol),
+                    CurrencyFormatter.format((item['total_cost'] as num?)?.toDouble() ?? 0.0, symbol: settings.currencySymbol),
                     statusStr,
                   ];
                 }),

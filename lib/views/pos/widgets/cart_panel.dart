@@ -13,8 +13,8 @@ import '../../../providers/license_provider.dart';
 import '../../../providers/reports_provider.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../providers/shift_provider.dart';
+import '../../../core/services/print_service.dart';
 import '../../license/activation_dialog.dart';
-import 'receipt_preview_modal.dart';
 
 class CartPanel extends StatefulWidget {
   const CartPanel({super.key});
@@ -118,15 +118,78 @@ class _CartPanelState extends State<CartPanel> {
         await shift.checkActiveShift(cashierId);
       }
 
-      // 3. Automatically refresh Invoices, Reports, and Inventory in background
-      invoices.loadInvoices();
+      // 3. Automatically refresh Invoices, Reports, and Inventory in background smoothly
+      invoices.loadInvoices(showSpinner: false);
       reports.loadReports();
-      inventory.loadInventory();
+      inventory.loadInventory(showSpinner: false);
 
       if (saveAndPrint && mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => ReceiptPreviewModal(order: order, settings: settings),
+        // Direct print in background without blocking UI thread
+        PrintService.directPrintReceipt(order: order, settings: settings).then((printed) {
+          if (!mounted) return;
+          if (!printed) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'تم حفظ الفاتورة #${order.invoiceNumber} بنجاح (لم يتم العثور على طابعة افتراضية للطباعة المباشرة)',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: AppColors.info,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
+          }
+        }).catchError((e) {
+          debugPrint('Background print error: $e');
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'تم حفظ الفاتورة #${order.invoiceNumber} بنجاح وجارِ إرسالها للطابعة...',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -9,6 +9,7 @@ import '../core/services/license_service.dart';
 import '../core/utils/number_parser.dart';
 
 class POSProvider with ChangeNotifier {
+  List<ProductModel> _allLoadedProducts = [];
   List<ProductModel> _products = [];
   List<CategoryModel> _categories = [];
   final List<OrderItemModel> _cartItems = [];
@@ -18,6 +19,7 @@ class POSProvider with ChangeNotifier {
   double _amountPaid = 0.0;
   bool _isLoading = false;
   String? _statusMessage;
+  String _activeCollection = 'all';
 
   List<ProductModel> get products => _products;
   List<CategoryModel> get categories => _categories;
@@ -34,23 +36,45 @@ class POSProvider with ChangeNotifier {
   double get changeDue => (_cartItems.isNotEmpty && _amountPaid > grandTotal) ? _amountPaid - grandTotal : 0.0;
   bool get canCheckout => _cartItems.isNotEmpty && _amountPaid >= grandTotal && grandTotal > 0;
 
-  Future<void> loadPOSData() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> loadPOSData({bool showSpinner = true}) async {
+    if (showSpinner) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
-      await DatabaseHelper.instance.cleanupOrphanedProducts();
+      final settings = await DatabaseHelper.instance.getStoreSettings();
+      _activeCollection = settings.activeCollection;
       _categories = await DatabaseHelper.instance.getAllCategories();
-      _products = await DatabaseHelper.instance.getProducts(
+      _allLoadedProducts = await DatabaseHelper.instance.getProducts(
         categoryId: _selectedCategoryId,
-        search: _searchQuery,
+        season: _activeCollection,
       );
+      _applyCurrentSearchFilter();
     } catch (e) {
       debugPrint('Error loading POS data: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void _applyCurrentSearchFilter() {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      _products = List.from(_allLoadedProducts);
+      return;
+    }
+
+    _products = _allLoadedProducts.where((p) {
+      final nameMatch = p.name.toLowerCase().contains(query);
+      final descMatch = p.description.toLowerCase().contains(query);
+      final variantMatch = p.variants.any((v) =>
+          v.skuBarcode.toLowerCase().contains(query) ||
+          v.size.toLowerCase().contains(query) ||
+          v.color.toLowerCase().contains(query));
+      return nameMatch || descMatch || variantMatch;
+    }).toList();
   }
 
   void selectCategory(int? categoryId) {
@@ -60,12 +84,14 @@ class POSProvider with ChangeNotifier {
 
   void setSearchQuery(String query) {
     _searchQuery = query;
-    loadPOSData();
+    _applyCurrentSearchFilter();
+    notifyListeners();
   }
 
   void clearSearch() {
     _searchQuery = '';
-    loadPOSData();
+    _products = List.from(_allLoadedProducts);
+    notifyListeners();
   }
 
   void addVariantToCart(ProductModel product, ProductVariantModel variant) {
@@ -115,8 +141,8 @@ class POSProvider with ChangeNotifier {
     if (found != null) {
       final variant = ProductVariantModel.fromMap(found);
       final product = ProductModel(
-        id: found['product_id'] as int,
-        categoryId: found['category_id'] as int? ?? 1,
+        id: (found['product_id'] as num).toInt(),
+        categoryId: (found['category_id'] as num?)?.toInt() ?? 1,
         name: found['product_name'] as String,
       );
       addVariantToCart(product, variant);
@@ -245,7 +271,7 @@ class POSProvider with ChangeNotifier {
       );
 
       clearCart();
-      await loadPOSData(); // Refresh product stock
+      await loadPOSData(showSpinner: false); // Refresh product stock smoothly without spinner
       return order;
     } catch (e) {
       debugPrint('Error during checkout: $e');

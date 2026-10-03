@@ -42,11 +42,11 @@ class ReportsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   double get totalSales => (_financialStats['total_sales'] as num?)?.toDouble() ?? 0.0;
-  int get totalOrders => (_financialStats['total_orders'] as int?) ?? 0;
+  int get totalOrders => (_financialStats['total_orders'] as num?)?.toInt() ?? 0;
   double get cashSales => (_financialStats['cash_sales'] as num?)?.toDouble() ?? 0.0;
   double get cardSales => (_financialStats['card_sales'] as num?)?.toDouble() ?? 0.0;
   double get totalReturns => (_financialStats['total_returns'] as num?)?.toDouble() ?? 0.0;
-  int get returnCount => (_financialStats['return_count'] as int?) ?? 0;
+  int get returnCount => (_financialStats['return_count'] as num?)?.toInt() ?? 0;
   double get netProfit => (_financialStats['net_profit'] as num?)?.toDouble() ?? 0.0;
   double get totalCogs => (_financialStats['total_cogs'] as num?)?.toDouble() ?? 0.0;
   double get profitMarginPercentage => totalSales > 0 ? (netProfit / totalSales) * 100 : 0.0;

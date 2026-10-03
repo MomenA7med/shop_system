@@ -96,9 +96,9 @@ class _CategoriesManagementDialogState extends State<CategoriesManagementDialog>
   }
 
   void _onConfirmDeleteCategory(Map<String, dynamic> category) {
-    final id = category['id'] as int;
+    final id = (category['id'] as num).toInt();
     final name = category['name'] as String;
-    final productCount = category['product_count'] as int;
+    final productCount = (category['product_count'] as num?)?.toInt() ?? 0;
 
     showDialog(
       context: context,
@@ -321,9 +321,9 @@ class _CategoriesManagementDialogState extends State<CategoriesManagementDialog>
                           separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final cat = _categoriesWithCount[index];
-                            final catId = cat['id'] as int;
+                            final catId = (cat['id'] as num).toInt();
                             final catName = cat['name'] as String;
-                            final count = cat['product_count'] as int;
+                            final count = (cat['product_count'] as num?)?.toInt() ?? 0;
                             final isEditing = _editingCategoryId == catId;
 
                             return Container(

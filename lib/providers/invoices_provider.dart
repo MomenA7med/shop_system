@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/database/database_helper.dart';
 import '../core/utils/number_parser.dart';
@@ -19,6 +20,7 @@ class InvoicesProvider with ChangeNotifier {
   OrderModel? _selectedInvoice;
   bool _isLoading = false;
   String? _errorMessage;
+  Timer? _searchDebounce;
 
   InvoiceDateFilter _dateFilter = InvoiceDateFilter.today;
   DateTime? _customStartDate;
@@ -46,10 +48,12 @@ class InvoicesProvider with ChangeNotifier {
   int get totalReturnedItemsCount => _invoices.fold(0, (sum, order) => sum + order.totalReturnedPieces);
   double get averageInvoiceValue => _invoices.isEmpty ? 0.0 : netSalesAmount / _invoices.length;
 
-  Future<void> loadInvoices() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> loadInvoices({bool showSpinner = true}) async {
+    if (showSpinner) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       DateTime? start;
@@ -128,7 +132,14 @@ class InvoicesProvider with ChangeNotifier {
 
   void setSearchQuery(String query) {
     _searchQuery = query;
-    loadInvoices();
+    _searchDebounce?.cancel();
+    if (query.trim().isEmpty) {
+      loadInvoices(showSpinner: false);
+    } else {
+      _searchDebounce = Timer(const Duration(milliseconds: 150), () {
+        loadInvoices(showSpinner: false);
+      });
+    }
   }
 
   void setStatusFilter(String status) {

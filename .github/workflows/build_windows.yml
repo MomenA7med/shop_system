@@ -2,9 +2,9 @@ name: Build Windows Release
 
 on:
   push:
-    branches: [supermarket]
+    branches: [main, master]
   pull_request:
-    branches: [supermarket]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:

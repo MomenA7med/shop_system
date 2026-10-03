@@ -43,16 +43,16 @@ class ProductVariantModel {
 
   factory ProductVariantModel.fromMap(Map<String, dynamic> map, {String? productName}) {
     return ProductVariantModel(
-      id: map['id'] as int?,
-      productId: map['product_id'] as int,
+      id: (map['id'] as num?)?.toInt(),
+      productId: (map['product_id'] as num).toInt(),
       productName: productName ?? map['product_name'] as String?,
       skuBarcode: map['sku_barcode'] as String,
       size: map['size'] as String,
       color: map['color'] as String,
       costPrice: (map['cost_price'] as num).toDouble(),
       sellingPrice: (map['selling_price'] as num).toDouble(),
-      stockQuantity: map['stock_quantity'] as int,
-      minStockAlert: (map['min_stock_alert'] as int?) ?? 2,
+      stockQuantity: (map['stock_quantity'] as num).toInt(),
+      minStockAlert: (map['min_stock_alert'] as num?)?.toInt() ?? 2,
     );
   }
 

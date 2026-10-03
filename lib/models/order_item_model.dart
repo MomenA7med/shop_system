@@ -56,18 +56,18 @@ class OrderItemModel {
 
   factory OrderItemModel.fromMap(Map<String, dynamic> map) {
     return OrderItemModel(
-      id: map['id'] as int?,
-      orderId: map['order_id'] as int?,
-      variantId: map['variant_id'] as int,
-      productId: map['product_id'] as int? ?? 0,
+      id: (map['id'] as num?)?.toInt(),
+      orderId: (map['order_id'] as num?)?.toInt(),
+      variantId: (map['variant_id'] as num).toInt(),
+      productId: (map['product_id'] as num?)?.toInt() ?? 0,
       productName: map['product_name'] as String,
       size: map['size'] as String? ?? '',
       color: map['color'] as String? ?? '',
       skuBarcode: map['sku_barcode'] as String? ?? '',
-      quantity: map['quantity'] as int,
+      quantity: (map['quantity'] as num).toInt(),
       unitPrice: (map['unit_price'] as num).toDouble(),
       costPrice: (map['cost_price'] as num?)?.toDouble() ?? 0.0,
-      returnedQuantity: (map['returned_quantity'] as int?) ?? 0,
+      returnedQuantity: (map['returned_quantity'] as num?)?.toInt() ?? 0,
     );
   }
 }

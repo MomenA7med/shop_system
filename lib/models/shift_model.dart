@@ -49,8 +49,8 @@ class ShiftModel {
 
   factory ShiftModel.fromMap(Map<String, dynamic> map, {String? cashierName}) {
     return ShiftModel(
-      id: map['id'] as int?,
-      cashierId: map['cashier_id'] as int,
+      id: (map['id'] as num?)?.toInt(),
+      cashierId: (map['cashier_id'] as num).toInt(),
       cashierName: cashierName ?? map['cashier_name'] as String?,
       openingFloat: (map['opening_float'] as num).toDouble(),
       cashSales: (map['cash_sales'] as num?)?.toDouble() ?? 0.0,

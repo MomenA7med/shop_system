@@ -5,10 +5,12 @@ import '../models/category_model.dart';
 import '../core/database/database_helper.dart';
 
 class InventoryProvider with ChangeNotifier {
+  List<ProductModel> _allLoadedProducts = [];
   List<ProductModel> _products = [];
   List<CategoryModel> _categories = [];
   List<ProductVariantModel> _lowStockVariants = [];
   int? _selectedCategoryId;
+  String _selectedSeason = 'active'; // 'active', 'all', 'summer', 'winter', 'general'
   String _searchQuery = '';
   bool _isLoading = false;
 
@@ -16,6 +18,7 @@ class InventoryProvider with ChangeNotifier {
   List<CategoryModel> get categories => _categories;
   List<ProductVariantModel> get lowStockVariants => _lowStockVariants;
   int? get selectedCategoryId => _selectedCategoryId;
+  String get selectedSeason => _selectedSeason;
   String get searchQuery => _searchQuery;
   bool get isLoading => _isLoading;
 
@@ -26,18 +29,41 @@ class InventoryProvider with ChangeNotifier {
   int get outOfStockVariantsCount => _products.fold(0, (sum, p) => sum + p.variants.where((v) => v.isOutOfStock).length);
   int get lowStockVariantsCount => _products.fold(0, (sum, p) => sum + p.variants.where((v) => v.isLowStock).length);
 
-  Future<void> loadInventory() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> loadInventory({bool showSpinner = true}) async {
+    if (showSpinner) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
-      await DatabaseHelper.instance.cleanupOrphanedProducts();
+      final settings = await DatabaseHelper.instance.getStoreSettings();
       _categories = await DatabaseHelper.instance.getAllCategories();
-      _products = await DatabaseHelper.instance.getProducts(
+
+      String? seasonParam;
+      bool exact = false;
+      if (_selectedSeason == 'active') {
+        seasonParam = settings.activeCollection;
+        exact = false;
+      } else if (_selectedSeason == 'summer') {
+        seasonParam = 'summer';
+        exact = true;
+      } else if (_selectedSeason == 'winter') {
+        seasonParam = 'winter';
+        exact = true;
+      } else if (_selectedSeason == 'general') {
+        seasonParam = 'all';
+        exact = true;
+      } else {
+        seasonParam = null;
+      }
+
+      _allLoadedProducts = await DatabaseHelper.instance.getProducts(
         categoryId: _selectedCategoryId,
-        search: _searchQuery,
+        season: seasonParam,
+        exactSeason: exact,
       );
       _lowStockVariants = await DatabaseHelper.instance.getLowStockVariants();
+      _applyCurrentSearchFilter();
     } catch (e) {
       debugPrint('Error loading inventory: $e');
     } finally {
@@ -46,14 +72,38 @@ class InventoryProvider with ChangeNotifier {
     }
   }
 
+  void _applyCurrentSearchFilter() {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      _products = List.from(_allLoadedProducts);
+      return;
+    }
+
+    _products = _allLoadedProducts.where((p) {
+      final nameMatch = p.name.toLowerCase().contains(query);
+      final descMatch = p.description.toLowerCase().contains(query);
+      final variantMatch = p.variants.any((v) =>
+          v.skuBarcode.toLowerCase().contains(query) ||
+          v.size.toLowerCase().contains(query) ||
+          v.color.toLowerCase().contains(query));
+      return nameMatch || descMatch || variantMatch;
+    }).toList();
+  }
+
   void selectCategory(int? categoryId) {
     _selectedCategoryId = categoryId;
     loadInventory();
   }
 
+  void selectSeason(String season) {
+    _selectedSeason = season;
+    loadInventory();
+  }
+
   void setSearchQuery(String query) {
     _searchQuery = query;
-    loadInventory();
+    _applyCurrentSearchFilter();
+    notifyListeners();
   }
 
   Future<bool> addProduct(ProductModel product, List<ProductVariantModel> variants) async {

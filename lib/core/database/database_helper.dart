@@ -46,9 +46,27 @@ class DatabaseHelper {
     );
 
     await _ensureSettingsColumnsExist(db);
+    await _ensureProductColumnsExist(db);
     await _ensureLicenseTableExists(db);
+    await _ensureIndexesExist(db);
     await _cleanupOrphanedProducts(db);
     return db;
+  }
+
+  Future<void> _ensureIndexesExist(Database db) async {
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_variant_barcode ON product_variants (sku_barcode)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_variant_product_id ON product_variants (product_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_product_category_id ON products (category_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_product_season ON products (season)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_product_name ON products (name)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_invoice ON orders (invoice_number)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_created_at ON orders (created_at)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_order_items_variant_id ON order_items (variant_id)');
+    } catch (e) {
+      debugPrint('Error creating indexes: $e');
+    }
   }
 
   Future<void> _cleanupOrphanedProducts(Database db) async {
@@ -80,9 +98,23 @@ class DatabaseHelper {
       if (!hasTheme) {
         await db.execute("ALTER TABLE store_settings ADD COLUMN theme_mode TEXT DEFAULT 'dark'");
       }
+      final hasCollection = info.any((col) => col['name'] == 'active_collection');
+      if (!hasCollection) {
+        await db.execute("ALTER TABLE store_settings ADD COLUMN active_collection TEXT DEFAULT 'all'");
+      }
       final hasLogo = info.any((col) => col['name'] == 'logo_path');
       if (!hasLogo) {
         await db.execute("ALTER TABLE store_settings ADD COLUMN logo_path TEXT");
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _ensureProductColumnsExist(Database db) async {
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(products)');
+      final hasSeason = info.any((col) => col['name'] == 'season');
+      if (!hasSeason) {
+        await db.execute("ALTER TABLE products ADD COLUMN season TEXT DEFAULT 'all'");
       }
     } catch (_) {}
   }
@@ -138,6 +170,7 @@ class DatabaseHelper {
         receipt_footer TEXT,
         tax_rate_percent REAL DEFAULT 0.0,
         theme_mode TEXT DEFAULT 'dark',
+        active_collection TEXT DEFAULT 'all',
         logo_path TEXT
       )
     ''');
@@ -155,6 +188,7 @@ class DatabaseHelper {
         category_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
+        season TEXT DEFAULT 'all',
         created_at TEXT NOT NULL,
         FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
       )
@@ -349,7 +383,7 @@ class DatabaseHelper {
           whereArgs: [id],
         );
         for (final row in productRows) {
-          final prodId = row['id'] as int;
+          final prodId = (row['id'] as num).toInt();
           await txn.delete(
             'product_variants',
             where: 'product_id = ?',
@@ -393,7 +427,12 @@ class DatabaseHelper {
   }
 
   // ================= PRODUCTS & VARIANTS =================
-  Future<List<ProductModel>> getProducts({int? categoryId, String? search}) async {
+  Future<List<ProductModel>> getProducts({
+    int? categoryId,
+    String? search,
+    String? season,
+    bool exactSeason = false,
+  }) async {
     final db = await database;
     String query = '''
       SELECT p.*, c.name as category_name 
@@ -406,6 +445,16 @@ class DatabaseHelper {
     if (categoryId != null && categoryId > 0) {
       conditions.add('p.category_id = ?');
       args.add(categoryId);
+    }
+
+    if (season != null && season.isNotEmpty && season != 'all') {
+      if (exactSeason) {
+        conditions.add('p.season = ?');
+        args.add(season);
+      } else {
+        conditions.add('(p.season = ? OR p.season = \'all\' OR p.season IS NULL)');
+        args.add(season);
+      }
     }
 
     if (search != null && search.trim().isNotEmpty) {
@@ -421,26 +470,31 @@ class DatabaseHelper {
     query += ' ORDER BY p.id DESC';
 
     final productRows = await db.rawQuery(query, args);
-    List<ProductModel> products = [];
+    if (productRows.isEmpty) return [];
 
-    for (final row in productRows) {
-      final pId = row['id'] as int;
-      final variantRows = await db.query(
-        'product_variants',
-        where: 'product_id = ?',
-        whereArgs: [pId],
-        orderBy: 'id ASC',
-      );
-      final variants = variantRows.map((v) => ProductVariantModel.fromMap(v, productName: row['name'] as String?)).toList();
+    final productIds = productRows.map((r) => (r['id'] as num).toInt()).toList();
+    final placeholders = List.filled(productIds.length, '?').join(',');
+    final variantRows = await db.rawQuery(
+      'SELECT * FROM product_variants WHERE product_id IN ($placeholders) ORDER BY id ASC',
+      productIds,
+    );
 
-      products.add(ProductModel.fromMap(
+    final Map<int, List<ProductVariantModel>> variantsByProductId = {};
+    for (final vRow in variantRows) {
+      final pId = (vRow['product_id'] as num).toInt();
+      variantsByProductId.putIfAbsent(pId, () => []);
+      variantsByProductId[pId]!.add(ProductVariantModel.fromMap(vRow));
+    }
+
+    return productRows.map((row) {
+      final pId = (row['id'] as num).toInt();
+      final variants = variantsByProductId[pId] ?? [];
+      return ProductModel.fromMap(
         row,
         categoryName: row['category_name'] as String?,
         variants: variants,
-      ));
-    }
-
-    return products;
+      );
+    }).toList();
   }
 
   Future<Map<String, dynamic>?> findVariantByBarcode(String barcode) async {
@@ -467,6 +521,7 @@ class DatabaseHelper {
         'category_id': product.categoryId,
         'name': product.name,
         'description': product.description,
+        'season': product.season,
         'created_at': DateTime.now().toIso8601String(),
       });
 
@@ -496,6 +551,7 @@ class DatabaseHelper {
           'category_id': product.categoryId,
           'name': product.name,
           'description': product.description,
+          'season': product.season,
         },
         where: 'id = ?',
         whereArgs: [product.id],
@@ -507,7 +563,7 @@ class DatabaseHelper {
         where: 'product_id = ?',
         whereArgs: [product.id],
       );
-      final existingIds = existingVariants.map((e) => e['id'] as int).toSet();
+      final existingIds = existingVariants.map((e) => (e['id'] as num).toInt()).toSet();
       final updatedIds = variants.where((v) => v.id != null).map((v) => v.id!).toSet();
 
       // Delete removed variants
@@ -678,7 +734,7 @@ class DatabaseHelper {
     if (orderRows.isEmpty) return null;
 
     final orderRow = orderRows.first;
-    final orderId = orderRow['id'] as int;
+    final orderId = (orderRow['id'] as num).toInt();
 
     final itemRows = await db.query(
       'order_items',
@@ -707,7 +763,7 @@ class DatabaseHelper {
 
     List<OrderModel> orders = [];
     for (final row in orderRows) {
-      final orderId = row['id'] as int;
+      final orderId = (row['id'] as num).toInt();
       final itemRows = await db.query(
         'order_items',
         where: 'order_id = ?',
@@ -765,19 +821,27 @@ class DatabaseHelper {
     whereArgs.add(limit);
 
     final orderRows = await db.rawQuery(query, whereArgs);
+    if (orderRows.isEmpty) return [];
 
-    List<OrderModel> orders = [];
-    for (final row in orderRows) {
-      final orderId = row['id'] as int;
-      final itemRows = await db.query(
-        'order_items',
-        where: 'order_id = ?',
-        whereArgs: [orderId],
-      );
-      final items = itemRows.map((e) => OrderItemModel.fromMap(e)).toList();
-      orders.add(OrderModel.fromMap(row, cashierName: row['cashier_name'] as String?, items: items));
+    final orderIds = orderRows.map((r) => (r['id'] as num).toInt()).toList();
+    final placeholders = List.filled(orderIds.length, '?').join(',');
+    final itemRows = await db.rawQuery(
+      'SELECT * FROM order_items WHERE order_id IN ($placeholders) ORDER BY id ASC',
+      orderIds,
+    );
+
+    final Map<int, List<OrderItemModel>> itemsByOrderId = {};
+    for (final itemRow in itemRows) {
+      final oId = (itemRow['order_id'] as num).toInt();
+      itemsByOrderId.putIfAbsent(oId, () => []);
+      itemsByOrderId[oId]!.add(OrderItemModel.fromMap(itemRow));
     }
-    return orders;
+
+    return orderRows.map((row) {
+      final oId = (row['id'] as num).toInt();
+      final items = itemsByOrderId[oId] ?? [];
+      return OrderModel.fromMap(row, cashierName: row['cashier_name'] as String?, items: items);
+    }).toList();
   }
 
   Future<void> updateOrder({
@@ -793,17 +857,17 @@ class DatabaseHelper {
       if (currentOrderRows.isEmpty) return;
       final currentOrder = currentOrderRows.first;
       final oldTotal = (currentOrder['total_amount'] as num).toDouble();
-      final shiftId = currentOrder['shift_id'] as int?;
+      final shiftId = (currentOrder['shift_id'] as num?)?.toInt();
 
       final existingItemRows = await txn.query('order_items', where: 'order_id = ?', whereArgs: [orderId]);
-      final existingItemsMap = {for (var item in existingItemRows) item['id'] as int: item};
+      final existingItemsMap = {for (var item in existingItemRows) (item['id'] as num).toInt(): item};
 
       Set<int> updatedItemIds = {};
       for (final item in items) {
         if (item.id != null && existingItemsMap.containsKey(item.id)) {
           updatedItemIds.add(item.id!);
           final oldItem = existingItemsMap[item.id]!;
-          final oldQty = oldItem['quantity'] as int;
+          final oldQty = (oldItem['quantity'] as num).toInt();
           final diffQty = item.quantity - oldQty;
 
           if (diffQty != 0) {
@@ -851,10 +915,10 @@ class DatabaseHelper {
       for (final existingId in existingItemsMap.keys) {
         if (!updatedItemIds.contains(existingId)) {
           final oldItem = existingItemsMap[existingId]!;
-          final oldQty = oldItem['quantity'] as int;
-          final returnedQty = (oldItem['returned_quantity'] as int?) ?? 0;
+          final oldQty = (oldItem['quantity'] as num).toInt();
+          final returnedQty = (oldItem['returned_quantity'] as num?)?.toInt() ?? 0;
           final restorable = oldQty - returnedQty;
-          final variantId = oldItem['variant_id'] as int;
+          final variantId = (oldItem['variant_id'] as num).toInt();
 
           if (restorable > 0) {
             await txn.rawUpdate('''
@@ -898,13 +962,13 @@ class DatabaseHelper {
       if (orderRows.isEmpty) return;
       final order = orderRows.first;
       final totalAmount = (order['total_amount'] as num).toDouble();
-      final shiftId = order['shift_id'] as int?;
+      final shiftId = (order['shift_id'] as num?)?.toInt();
 
       final items = await txn.query('order_items', where: 'order_id = ?', whereArgs: [orderId]);
       for (final item in items) {
-        final variantId = item['variant_id'] as int;
-        final qty = item['quantity'] as int;
-        final retQty = (item['returned_quantity'] as int?) ?? 0;
+        final variantId = (item['variant_id'] as num).toInt();
+        final qty = (item['quantity'] as num).toInt();
+        final retQty = (item['returned_quantity'] as num?)?.toInt() ?? 0;
         final restorable = qty - retQty;
         if (restorable > 0) {
           await txn.rawUpdate('''
@@ -992,8 +1056,8 @@ class DatabaseHelper {
       final items = await txn.query('order_items', where: 'order_id = ?', whereArgs: [orderId]);
       bool allReturned = true;
       for (final item in items) {
-        final q = item['quantity'] as int;
-        final rq = item['returned_quantity'] as int;
+        final q = (item['quantity'] as num).toInt();
+        final rq = (item['returned_quantity'] as num?)?.toInt() ?? 0;
         if (rq < q) {
           allReturned = false;
           break;
@@ -1170,11 +1234,11 @@ class DatabaseHelper {
     ''', itemsArgs);
 
     final totalSales = (salesRes.first['total_sales'] as num?)?.toDouble() ?? 0.0;
-    final totalOrders = (salesRes.first['total_orders'] as int?) ?? 0;
+    final totalOrders = (salesRes.first['total_orders'] as num?)?.toInt() ?? 0;
     final cashSales = (methodsRes.first['cash_sales'] as num?)?.toDouble() ?? 0.0;
     final cardSales = (methodsRes.first['card_sales'] as num?)?.toDouble() ?? 0.0;
     final totalReturns = (returnsRes.first['total_returns'] as num?)?.toDouble() ?? 0.0;
-    final returnCount = (returnsRes.first['return_count'] as int?) ?? 0;
+    final returnCount = (returnsRes.first['return_count'] as num?)?.toInt() ?? 0;
     final netProfit = (profitRes.first['net_profit'] as num?)?.toDouble() ?? 0.0;
     final totalCogs = (profitRes.first['total_cogs'] as num?)?.toDouble() ?? 0.0;
 

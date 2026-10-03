@@ -49,16 +49,16 @@ class ReturnModel {
 
   factory ReturnModel.fromMap(Map<String, dynamic> map) {
     return ReturnModel(
-      id: map['id'] as int?,
-      orderId: map['order_id'] as int,
-      orderItemId: map['order_item_id'] as int,
-      variantId: map['variant_id'] as int,
-      shiftId: map['shift_id'] as int?,
+      id: (map['id'] as num?)?.toInt(),
+      orderId: (map['order_id'] as num).toInt(),
+      orderItemId: (map['order_item_id'] as num).toInt(),
+      variantId: (map['variant_id'] as num).toInt(),
+      shiftId: (map['shift_id'] as num?)?.toInt(),
       productName: map['product_name'] as String? ?? '',
       size: map['size'] as String? ?? '',
       color: map['color'] as String? ?? '',
       skuBarcode: map['sku_barcode'] as String? ?? '',
-      quantity: map['quantity'] as int,
+      quantity: (map['quantity'] as num).toInt(),
       refundAmount: (map['refund_amount'] as num).toDouble(),
       reason: map['reason'] as String? ?? 'طلب العميل',
       createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),

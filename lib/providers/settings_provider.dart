@@ -87,6 +87,16 @@ class SettingsProvider with ChangeNotifier {
     }
   }
 
+  Future<void> setActiveCollection(String collection) async {
+    _settings = _settings.copyWith(activeCollection: collection);
+    notifyListeners();
+    try {
+      await DatabaseHelper.instance.updateStoreSettings(_settings);
+    } catch (e) {
+      debugPrint('Error saving active collection: $e');
+    }
+  }
+
   Future<bool> updateSettings(StoreSettingsModel newSettings) async {
     try {
       await DatabaseHelper.instance.updateStoreSettings(newSettings);

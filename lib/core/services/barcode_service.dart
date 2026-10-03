@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import '../../models/product_variant_model.dart';
 import '../../models/store_settings_model.dart';
 import '../utils/currency_formatter.dart';
+import 'print_service.dart';
 
 class BarcodeService {
   /// Generate a unique 8-digit barcode for a variant
@@ -23,8 +24,8 @@ class BarcodeService {
     required int copies,
   }) async {
     final doc = pw.Document();
-    final font = await PdfGoogleFonts.cairoRegular();
-    final fontBold = await PdfGoogleFonts.cairoBold();
+    final font = await PrintService.getFont();
+    final fontBold = await PrintService.getFontBold();
 
     // Standard Label dimensions: ~50mm x 30mm per sticker
     const labelWidth = 50.0 * PdfPageFormat.mm;
